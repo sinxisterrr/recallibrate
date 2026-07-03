@@ -1,0 +1,4 @@
+# ━ ╱ ━━━━━━ ENVIRONMENT ━━━━━━
+.env
+.env.local
+/venv
