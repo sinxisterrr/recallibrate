@@ -25,5 +25,19 @@ connectBtn.addEventListener('click', async () => {
         button.className = 'tables-btn'
         button.textContent = table
         tablesSection.appendChild(button)
+            button.addEventListener('click', async () => {
+                const table = button.textContent
+                const res = await fetch(`http://localhost:8000/api/tables/${table}/columns?db_url=${dbUrlInput.value}`)
+                const data = await res.json()
+                console.log(data)
+                const searchSection = document.getElementById('search')
+                searchSection.innerHTML = ''
+                data.columns.forEach((col) => {
+                    const label = document.createElement('label')
+                    label.textContent = col.name
+                    searchSection.appendChild(label)
+                })
+            })
     })
+
   })

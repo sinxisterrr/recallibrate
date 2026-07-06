@@ -3,6 +3,8 @@
 # ┕──────────────────────────────────────────┚
 
 from fastapi import FastAPI
+from fastapi.staticfiles import StaticFiles
+from fastapi.responses import FileResponse
 import asyncpg
 from pydantic import BaseModel
 from fastapi.middleware.cors import CORSMiddleware
@@ -177,6 +179,8 @@ async def delete_entry(payload: DeleteEntryRequest):
 
 @app.get("/")
 def read_root():
-    return {"message": "something"}
+    return FileResponse("frontend/index.html")
+
+app.mount("/", StaticFiles(directory="frontend"), name="static")
 
 # ─────  ✷ Made by Me. ☺️  ─────
