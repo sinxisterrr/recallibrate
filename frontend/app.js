@@ -17,4 +17,13 @@ connectBtn.addEventListener('click', async () => {
     const res = await fetch(`http://localhost:8000/api/tables?db_url=${url}`)
     const data = await res.json()
     console.log(data)
+    const tablesSection = document.getElementById('tables')
+        tablesSection.innerHTML = ''
+
+    data.tables.forEach((table) => {
+        const button = document.createElement('button')
+        button.className = 'tables-btn'
+        button.textContent = table
+        tablesSection.appendChild(button)
+    })
   })

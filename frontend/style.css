@@ -115,3 +115,26 @@ header {
     font-size: 1rem;
     cursor: pointer;
 }
+
+#tables {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 8px;
+    padding: 24px;
+}
+
+.tables-btn {
+    background-color: var(--bg-surface);
+    padding: 10px 20px;
+    font-size: 1rem;
+    color: var(--text);
+    border: none;
+    border-radius: var(--radius);
+    cursor: pointer;
+}
+
+@media (min-width: 768px) {
+    #tables {
+        grid-template-columns: repeat(3, 1fr);
+    }    
+}
