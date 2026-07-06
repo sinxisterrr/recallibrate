@@ -123,6 +123,22 @@ header {
     padding: 24px;
 }
 
+#table-view {
+    display: none;
+}
+
+main.table-view #table-view {
+    display: flex;
+}
+
+main.table-view #connect {
+    display: none;
+}
+
+main.table-view #tables {
+    display: none;
+}
+
 .tables-btn {
     background-color: var(--bg-surface);
     padding: 10px 20px;

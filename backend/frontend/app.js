@@ -37,6 +37,8 @@ connectBtn.addEventListener('click', async () => {
                     label.textContent = col.name
                     searchSection.appendChild(label)
                 })
+                document.querySelector('main').classList.add('table-view')
+                document.getElementById('table-name').textContent = table
             })
     })
 
