@@ -87,7 +87,7 @@ async def list_data(db_url:str, table:str):
 # ▸▸▸ Find data in tables with search parameters.
 
 @app.post("/api/database/search")
-async def search_memories(payload: SearchRequest):
+async def search_entries(payload: SearchRequest):
     conn = await asyncpg.connect(payload.db_url)
 
     valid_tables = await conn.fetch(
@@ -98,12 +98,57 @@ async def search_memories(payload: SearchRequest):
     if payload.table_name not in valid_table_names:
         await conn.close()
         return {"error": "invalid table name"}
+    
+    cols = await conn.fetch(
+        "SELECT column_name FROM information_schema.columns WHERE table_name = $1 AND table_schema = 'public' AND data_type IN ('text', 'character varying', 'varchar')",
+        payload.table_name
+    )
+    text_cols = [row["column_name"] for row in cols]
+
+    if not text_cols:
+        await conn.close()
+        return {"error": "no searchable text columns in this table"}
+
+    try:
+        conditions = []
+        args = []
+
+        if payload.query:
+            if payload.fuzzy:
+                query_conditions = " OR ".join([f"similarity({col}, $1) > 0.2" for col in text_cols])
+            else:
+                query_conditions = " OR ".join([f"{col} ILIKE $1" for col in text_cols])
+            conditions.append(f"({query_conditions})")
+            args.append(f"%{payload.query}%" if not payload.fuzzy else payload.query)
+
+        if payload.filters:
+            for col, values in payload.filters.items():
+                if col in text_cols:
+                    placeholders = ", ".join([f"${len(args) + i + 1}" for i in range(len(values))])
+                    conditions.append(f"{col} IN ({placeholders})")
+                    args.extend(values)
+
+        if payload.date_from:
+            args.append(payload.date_from)
+            conditions.append(f"created_at >= ${len(args)}")
+
+        if payload.date_to:
+            args.append(payload.date_to)
+            conditions.append(f"created_at <= ${len(args)}")
+
+        where_clause = f"WHERE {' AND '.join(conditions)}" if conditions else ""
+        sql = f"SELECT * FROM {payload.table_name} {where_clause}"
+
+        rows = await conn.fetch(sql, *args)
+        return {"results": [dict(row) for row in rows]}
+    finally:
+        await conn.close()
 
 # ────[ UPDATE ENTRIES ]────────────────────────────
 # ▸▸▸ Update database entries.
 
 @app.put("/api/database/record")
-async def update_memories(payload: UpdateEntryRequest):
+async def update_entry(payload: UpdateEntryRequest):
     conn = await asyncpg.connect(payload.db_url)
     try:
         await conn.execute(
@@ -119,7 +164,7 @@ async def update_memories(payload: UpdateEntryRequest):
 # ▸▸▸ Delete database entries.
 
 @app.delete("/api/database/record")
-async def delete_memories(payload: DeleteEntryRequest):
+async def delete_entry(payload: DeleteEntryRequest):
     conn = await asyncpg.connect(payload.db_url)
     try:
         await conn.execute(
