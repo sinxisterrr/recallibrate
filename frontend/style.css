@@ -41,14 +41,14 @@ header {
     justify-content: center;
     gap: 16px;
     padding: 16px 24px;
-    background-color: var(--bg-surface);
+    background-color: transparent;
 }
 
 .theme-toggle {
     margin-left: auto;
     position: relative;
     display: flex;
-    background-color: var(--bg);
+    background-color: var(--bg-surface);
     border-radius: 999px;
     padding: 4px;
     gap: 0;
@@ -76,9 +76,42 @@ header {
     transition: transform var(--transition);
 }
 
+.logo {
+    font-family: monospace;
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: var(--text);
+}
+
+.logo em {
+    color: var(--accent);
+    font-style: italic;
+}
+
 #connect {
     display: flex;
     justify-content: center;
     gap: 8px;
     padding: 24px;
+}
+
+#db-url {
+    background-color: var(--bg-surface);
+    color: var(--text);
+    border: none;
+    border-radius: var(--radius);
+    padding: 10px 20px;
+    font-size: 1rem;
+    width: 320px;
+    outline: none;
+}
+
+#connect-btn {
+    background-color: var(--accent);
+    color: #000;
+    border: none;
+    border-radius: var(--radius);
+    padding: 10px 20px;
+    font-size: 1rem;
+    cursor: pointer;
 }

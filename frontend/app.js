@@ -1,5 +1,7 @@
 const buttons = document.querySelectorAll('[data-theme-btn]')
 const pill = document.querySelector('.pill')
+const connectBtn = document.getElementById('connect-btn')
+const dbUrlInput = document.getElementById('db-url')
 
 buttons.forEach((button) => {
     button.addEventListener('click', () => {
@@ -9,3 +11,10 @@ buttons.forEach((button) => {
         document.documentElement.setAttribute('data-theme', theme)
     })
 })
+
+connectBtn.addEventListener('click', async () => {
+    const url = dbUrlInput.value
+    const res = await fetch(`http://localhost:8000/api/tables?db_url=${url}`)
+    const data = await res.json()
+    console.log(data)
+  })
