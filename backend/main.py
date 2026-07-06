@@ -50,8 +50,8 @@ class DeleteEntryRequest(BaseModel):
 # ▸▸▸ Query database and retrieve table names.
 
 @app.get("/api/tables")
-async def list_tables(payload: SearchRequest):
-    conn = await asyncpg.connect(payload.db_url)
+async def list_tables(db_url:str):
+    conn = await asyncpg.connect(db_url)
     rows = await conn.fetch(
         "SELECT table_name FROM information_schema.tables WHERE table_schema = 'public'"
     )
@@ -62,28 +62,26 @@ async def list_tables(payload: SearchRequest):
 # ▸▸▸ Query database and retrieve column names.
 
 @app.get("/api/tables/{table}/columns")
-async def list_data(table:str, db_url:str):
-    conn = await asyncpg.connect(payload.db_url)
-
-    cols = await conn.fetch(
-        "SELECT column_name, data_type FROM information_schema.columns WHERE table_name = $1 AND table_schema = 'public'",
-        table
-    )
-    result = []
-    for col in cols:
-        name: col["column_name"]
-        dtype = col["data_type"]
-
-# ▸▸▸ Query database and retrieve column values.
-
-    column_value = await conn.fetch(
-        "SELECT column_value FROM information_schema.tables WHERE "
-    ) 
-    valid_column_values = [row["column_value"] for row in column_values]
-
-    if payload.column_name not in valid_column_names:
+async def list_data(db_url:str, table:str):
+    conn = await asyncpg.connect(db_url)
+    try:
+        cols = await conn.fetch(
+            "SELECT column_name, data_type FROM information_schema.columns WHERE table_name = $1 AND table_schema = 'public'",
+            table
+        )
+        result = []
+        for col in cols:
+            name = col["column_name"]
+            count = await conn.fetchval(f"SELECT COUNT(DISTINCT {name}) FROM {table}")
+            if count <= 20:
+                rows = await conn.fetch(f"SELECT DISTINCT {name} FROM {table}")
+                options = [row[0] for row in rows]
+            else:
+                options = None
+            result.append({"name": name, "type": col["data_type"], "options": options})
+    finally:
         await conn.close()
-        return {"error": "invalid column name"}
+    return {"columns": result}
 
 # ────[ SEARCH TABLES ]────────────────────────────
 # ▸▸▸ Find data in tables with search parameters.
