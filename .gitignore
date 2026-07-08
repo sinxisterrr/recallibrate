@@ -2,6 +2,7 @@
 .env
 .env.local
 backend/.venv
+backend/venv
 backend/__pycache__
 google-credentials.json
 
