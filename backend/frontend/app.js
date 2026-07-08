@@ -40,6 +40,8 @@ connectBtn.addEventListener('click', async () => {
                 document.querySelector('main').classList.add('table-view')
                 document.getElementById('table-name').textContent = table
             })
-    })
+        })
 
   })
+
+lucide.createIcons()

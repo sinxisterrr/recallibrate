@@ -57,6 +57,9 @@ header {
 .theme-toggle button {
     position: relative;
     z-index: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
     background: none;
     border: none;
     cursor: pointer;
@@ -64,6 +67,18 @@ header {
     border-radius: 999px;
     font-size: 16px;
 }
+
+.theme-toggle button svg {
+      color: var(--text-muted);
+      width: 22px;
+      height: 22px;
+  }
+
+[data-theme="light"] button[data-theme-btn="light"] svg,
+[data-theme="system"] button[data-theme-btn="system"] svg,
+[data-theme="dark"] button[data-theme-btn="dark"] svg {
+    color: var(--accent);
+  }
 
 .pill {
     position: absolute;
@@ -153,4 +168,26 @@ main.table-view #tables {
     #tables {
         grid-template-columns: repeat(3, 1fr);
     }    
+}
+
+@media (prefers-color-scheme: light) {
+    [data-theme="system"] {
+        --bg: #f8f4f9;
+        --bg-surface: #ede8ee;
+        --text: #1a1a1a;
+        --text-muted: #888;
+        --accent: #0099b0;
+        --divider: rgba(0, 0, 0, 0.08);
+    }
+}
+
+@media (prefers-color-scheme: dark) {
+    [data-theme="system"] {
+        --bg: #1f1f1f;
+        --bg-surface: #2a2a2a;
+        --text: #f0f0f0;
+        --text-muted: #666;
+        --accent: #00e0ff;
+        --divider: rgba(255, 255, 255, 0.06);
+    }
 }

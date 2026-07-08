@@ -4,15 +4,16 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>recallibrate</title>
+    <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
     <header>
         <h1 class="logo"><em>recall</em>ibrate</h1>
         <div class="theme-toggle">
-                <button data-theme-btn="light">☀️</button>
-                <button data-theme-btn="system">🖥️</button>
-                <button data-theme-btn="dark">🌙</button>
+                <button data-theme-btn="light"><i data-lucide="sun"></i></button>
+                <button data-theme-btn="system"><i data-lucide="monitor"></i></button>
+                <button data-theme-btn="dark"><i data-lucide="moon"></i></button>
             <div class="pill"></div>
         </div>
     </header>
@@ -22,7 +23,7 @@
                 <button id="connect-btn">Connect</button>
             </section>
             <div id="table-view">
-                <button id="back-btn">&#8592;</button>
+                <button id="back-btn"><i data-lucide="arrow-left"></i></button>
                 <span id="table-name"></span>
                 <input type="text" id="search-input" placeholder="Search...">
             </div>
