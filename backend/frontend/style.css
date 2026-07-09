@@ -131,6 +131,19 @@ header {
     cursor: pointer;
 }
 
+#table-filter {
+    display: block;
+    margin: 16px auto;
+    background-color: var(--bg-surface);
+    color: var(--text);
+    border: none;
+    border-radius: var(--radius);
+    padding: 10px 20px;
+    font-size: 1rem;
+    width: 320px;
+    outline: none;
+}
+
 #tables {
     display: grid;
     grid-template-columns: repeat(2, 1fr);
@@ -156,12 +169,17 @@ main.table-view #tables {
 
 .tables-btn {
     background-color: var(--bg-surface);
+    transition: box-shadow var(--transition);
     padding: 10px 20px;
     font-size: 1rem;
     color: var(--text);
     border: none;
     border-radius: var(--radius);
     cursor: pointer;
+}
+
+.tables-btn:hover {
+      box-shadow: inset 4px 0 0 var(--accent);
 }
 
 @media (min-width: 768px) {

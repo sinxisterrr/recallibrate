@@ -16,11 +16,10 @@ connectBtn.addEventListener('click', async () => {
     const url = dbUrlInput.value
     const res = await fetch(`http://localhost:8000/api/tables?db_url=${url}`)
     const data = await res.json()
-    console.log(data)
     const tablesSection = document.getElementById('tables')
-        tablesSection.innerHTML = ''
+    tablesSection.innerHTML = ''
 
-    data.tables.forEach((table) => {
+    data.tables.sort().forEach((table) => {
         const button = document.createElement('button')
         button.className = 'tables-btn'
         button.textContent = table
@@ -41,7 +40,13 @@ connectBtn.addEventListener('click', async () => {
                 document.getElementById('table-name').textContent = table
             })
         })
-
+        
+document.getElementById('table-filter').addEventListener('input', (e) => {
+                    const val = e.target.value.toLowerCase()
+                    document.querySelectorAll('.tables-btn').forEach((btn) => {
+                        btn.style.display = btn.textContent.includes(val) ? '' : 'none'
+                    })
+                })
   })
 
 lucide.createIcons()
