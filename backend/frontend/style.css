@@ -31,7 +31,7 @@
 body {
     background-color: var(--bg);
     color: var(--text);
-    font-family: sans-serif;
+    font-family: 'Cinzel', sans-serif;
     transition: background-color var(--transition), color var(--transition);
 }
 

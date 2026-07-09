@@ -40,7 +40,7 @@ connectBtn.addEventListener('click', async () => {
                 document.getElementById('table-name').textContent = table
             })
         })
-        
+
 document.getElementById('table-filter').addEventListener('input', (e) => {
                     const val = e.target.value.toLowerCase()
                     document.querySelectorAll('.tables-btn').forEach((btn) => {
@@ -50,3 +50,4 @@ document.getElementById('table-filter').addEventListener('input', (e) => {
   })
 
 lucide.createIcons()
+pill.style.transform = `translateX(100%)`
