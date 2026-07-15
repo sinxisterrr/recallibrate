@@ -17,6 +17,20 @@ FRONTEND_DIR = BASE_DIR / "frontend"
 MAX_RESULTS = 500
 LOW_CARDINALITY_LIMIT = 20
 TEXT_TYPES = {"text", "character varying", "varchar", "character", "char"}
+CAST_TYPES = {
+    "boolean": "boolean",
+    "smallint": "smallint",
+    "integer": "integer",
+    "bigint": "bigint",
+    "numeric": "numeric",
+    "decimal": "decimal",
+    "real": "real",
+    "double precision": "double precision",
+    "date": "date",
+    "timestamp without time zone": "timestamp without time zone",
+    "timestamp with time zone": "timestamp with time zone",
+    "uuid": "uuid",
+}
 PORTFOLIO_TABLES = {"sam_lore", "projects", "opinions", "skills", "favorites"}
 
 PORTFOLIO_ONLY = os.getenv("RECALLIBRATE_PORTFOLIO_ONLY", "").lower() in {"1", "true", "yes"}
@@ -70,7 +84,7 @@ def quote_identifier(value: str) -> str:
 async def table_schema(conn: asyncpg.Connection, table_name: str) -> list[asyncpg.Record]:
     columns = await conn.fetch(
         """
-        SELECT column_name, data_type, ordinal_position
+        SELECT column_name, data_type, udt_name, ordinal_position
         FROM information_schema.columns
         WHERE table_schema = 'public' AND table_name = $1
         ORDER BY ordinal_position
@@ -80,6 +94,17 @@ async def table_schema(conn: asyncpg.Connection, table_name: str) -> list[asyncp
     if not columns:
         raise HTTPException(status_code=404, detail="That table does not exist in the public schema.")
     return columns
+
+
+async def connect_database(db_url: str) -> asyncpg.Connection:
+    try:
+        return await asyncpg.connect(db_url, timeout=12)
+    except asyncpg.InvalidPasswordError as error:
+        raise HTTPException(status_code=400, detail="The database rejected those credentials.") from error
+    except (OSError, TimeoutError) as error:
+        raise HTTPException(status_code=400, detail="Recallibrate could not reach that database host.") from error
+    except asyncpg.PostgresError as error:
+        raise HTTPException(status_code=400, detail=f"Database connection failed: {error}") from error
 
 
 def portfolio_database_url() -> str:
@@ -102,7 +127,7 @@ def require_local_mode() -> None:
 @app.post("/api/database/tables")
 async def list_tables(payload: ConnectRequest):
     require_local_mode()
-    conn = await asyncpg.connect(payload.db_url)
+    conn = await connect_database(payload.db_url)
     try:
         rows = await conn.fetch(
             """
@@ -120,7 +145,7 @@ async def list_tables(payload: ConnectRequest):
 @app.post("/api/database/columns")
 async def list_columns(payload: TableRequest):
     require_local_mode()
-    conn = await asyncpg.connect(payload.db_url)
+    conn = await connect_database(payload.db_url)
     try:
         columns = await table_schema(conn, payload.table_name)
         quoted_table = quote_identifier(payload.table_name)
@@ -153,6 +178,7 @@ async def list_columns(payload: TableRequest):
             result.append({
                 "name": name,
                 "type": column["data_type"],
+                "database_type": column["udt_name"],
                 "options": options,
             })
 
@@ -164,7 +190,7 @@ async def list_columns(payload: TableRequest):
 @app.post("/api/database/search")
 async def search_entries(payload: SearchRequest):
     require_local_mode()
-    conn = await asyncpg.connect(payload.db_url)
+    conn = await connect_database(payload.db_url)
     try:
         columns = await table_schema(conn, payload.table_name)
         column_types = {column["column_name"]: column["data_type"] for column in columns}
@@ -216,7 +242,7 @@ async def search_entries(payload: SearchRequest):
 
 @app.get("/api/portfolio/tables")
 async def portfolio_tables():
-    conn = await asyncpg.connect(portfolio_database_url())
+    conn = await connect_database(portfolio_database_url())
     try:
         rows = await conn.fetch(
             """
@@ -234,7 +260,7 @@ async def portfolio_tables():
 @app.get("/api/portfolio/tables/{table_name}/columns")
 async def portfolio_columns(table_name: str):
     require_portfolio_table(table_name)
-    conn = await asyncpg.connect(portfolio_database_url())
+    conn = await connect_database(portfolio_database_url())
     try:
         columns = await table_schema(conn, table_name)
         quoted_table = quote_identifier(table_name)
@@ -256,7 +282,7 @@ async def portfolio_columns(table_name: str):
                     f"SELECT DISTINCT {quoted_column}::text AS value FROM {quoted_table} ORDER BY value NULLS LAST LIMIT {LOW_CARDINALITY_LIMIT}"
                 )
                 options = [row["value"] for row in option_rows]
-            result.append({"name": name, "type": column["data_type"], "options": options})
+            result.append({"name": name, "type": column["data_type"], "database_type": column["udt_name"], "options": options})
         return {"columns": result}
     finally:
         await conn.close()
@@ -265,7 +291,7 @@ async def portfolio_columns(table_name: str):
 @app.post("/api/portfolio/search")
 async def portfolio_search(payload: PortfolioSearchRequest):
     require_portfolio_table(payload.table_name)
-    conn = await asyncpg.connect(portfolio_database_url())
+    conn = await connect_database(portfolio_database_url())
     try:
         columns = await table_schema(conn, payload.table_name)
         column_types = {column["column_name"]: column["data_type"] for column in columns}
@@ -302,7 +328,7 @@ async def portfolio_search(payload: PortfolioSearchRequest):
 @app.put("/api/database/record")
 async def update_entry(payload: UpdateEntryRequest):
     require_local_mode()
-    conn = await asyncpg.connect(payload.db_url)
+    conn = await connect_database(payload.db_url)
     try:
         columns = await table_schema(conn, payload.table_name)
         column_types = {column["column_name"]: column["data_type"] for column in columns}
@@ -310,13 +336,21 @@ async def update_entry(payload: UpdateEntryRequest):
             raise HTTPException(status_code=400, detail="Inline editing requires an id column.")
         if payload.column_name not in column_types:
             raise HTTPException(status_code=400, detail="That column does not exist.")
-        if column_types[payload.column_name] not in TEXT_TYPES:
-            raise HTTPException(status_code=400, detail="Only text columns can be edited inline.")
+        selected_column = next(column for column in columns if column["column_name"] == payload.column_name)
+        data_type = selected_column["data_type"]
+        if data_type in TEXT_TYPES:
+            value_expression = "$1"
+        elif data_type in CAST_TYPES:
+            value_expression = f"$1::{CAST_TYPES[data_type]}"
+        elif data_type == "USER-DEFINED":
+            value_expression = f"$1::{quote_identifier(selected_column['udt_name'])}"
+        else:
+            raise HTTPException(status_code=400, detail="That column type cannot be edited inline.")
 
         status = await conn.execute(
             f"""
             UPDATE {quote_identifier(payload.table_name)}
-            SET {quote_identifier(payload.column_name)} = $1
+            SET {quote_identifier(payload.column_name)} = {value_expression}
             WHERE {quote_identifier('id')}::text = $2
             """,
             payload.new_text,
@@ -332,7 +366,7 @@ async def update_entry(payload: UpdateEntryRequest):
 @app.delete("/api/database/record")
 async def delete_entry(payload: DeleteEntryRequest):
     require_local_mode()
-    conn = await asyncpg.connect(payload.db_url)
+    conn = await connect_database(payload.db_url)
     try:
         columns = await table_schema(conn, payload.table_name)
         if "id" not in {column["column_name"] for column in columns}:

@@ -9,8 +9,8 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600&family=IBM+Plex+Mono:ital,wght@0,400;0,500;1,500&display=swap" rel="stylesheet">
-    <script src="lucide.min.js?v=20260715-2"></script>
-    <link rel="stylesheet" href="style.css?v=20260715-2">
+    <script src="lucide.min.js?v=20260715-3"></script>
+    <link rel="stylesheet" href="style.css?v=20260715-3">
 </head>
 <body>
     <div class="ambient-grid" aria-hidden="true"></div>
@@ -28,44 +28,23 @@
 
         <main class="connect-main">
             <div class="connect-copy">
-                <div class="eyebrow"><span></span> Local PostgreSQL workbench</div>
-                <h1>Bring your data<br><em>back into focus.</em></h1>
-                <p>Search, filter, and carefully edit the memory behind your machines—from one quiet, private workspace.</p>
+                <div class="eyebrow"><span></span> Local PostgreSQL manager</div>
+                <h1>Your database,<br><em>made readable.</em></h1>
+                <p>Connect, choose a table, then search and edit its records.</p>
 
                 <form id="connect-form" class="connection-card" novalidate>
-                    <div class="card-index" aria-hidden="true">01 / CONNECT</div>
                     <label for="db-url">Database URL</label>
                     <div class="url-field">
                         <i data-lucide="database"></i>
                         <input type="password" id="db-url" placeholder="postgresql://user:••••••@host/database" autocomplete="off" spellcheck="false" required>
                         <button type="button" id="reveal-url" class="icon-btn" aria-label="Show database URL" aria-pressed="false"><i data-lucide="eye"></i></button>
                     </div>
-                    <div class="connect-actions">
-                        <p><i data-lucide="shield-check"></i> Your credentials stay in this local session.</p>
-                        <button type="submit" id="connect-btn" class="primary-btn"><span>Open database</span><i data-lucide="arrow-up-right"></i></button>
-                    </div>
+                    <button type="submit" id="connect-btn" class="primary-btn"><span>Open database</span><i data-lucide="arrow-right"></i></button>
+                    <p class="privacy-note"><i data-lucide="shield-check"></i> Credentials stay in this local session.</p>
                     <div id="connect-error" class="inline-error" role="alert" aria-live="polite"></div>
                 </form>
             </div>
-
-            <div class="memory-map" aria-hidden="true">
-                <div class="map-label">LIVE SCHEMA / PREVIEW</div>
-                <div class="orbit orbit-one"></div>
-                <div class="orbit orbit-two"></div>
-                <div class="node node-a"><span>users</span><small>2,481 rows</small></div>
-                <div class="node node-b"><span>memories</span><small>18 columns</small></div>
-                <div class="node node-c"><span>messages</span><small>live</small></div>
-                <div class="node node-core"><i data-lucide="asterisk"></i></div>
-                <div class="coordinate coordinate-a">53.5461° N</div>
-                <div class="coordinate coordinate-b">LOCAL / PRIVATE</div>
-            </div>
         </main>
-
-        <footer class="connect-footer">
-            <span>Built for the data you remember</span>
-            <span class="footer-line"></span>
-            <span>v0.2</span>
-        </footer>
     </section>
 
     <section id="workspace-view" class="workspace-view" hidden>
@@ -165,7 +144,7 @@
                         <h3>Couldn’t read this table</h3>
                         <p id="results-error-message">Check the connection and try again.</p>
                     </div>
-                    <div class="table-scroll"><table id="results-table"></table></div>
+                    <div class="results-scroll"><div id="results-table" class="results-list"></div></div>
                 </div>
             </section>
         </main>
@@ -186,6 +165,6 @@
         </form>
     </dialog>
 
-    <script src="app.js?v=20260715-2"></script>
+    <script src="app.js?v=20260715-3"></script>
 </body>
 </html>

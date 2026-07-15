@@ -9,8 +9,8 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600&family=IBM+Plex+Mono:ital,wght@0,400;0,500;1,500&display=swap" rel="stylesheet">
-    <script src="/portfolio-assets/lucide.min.js?v=2"></script>
-    <link rel="stylesheet" href="/portfolio-assets/portfolio.css?v=2">
+    <script src="/portfolio-assets/lucide.min.js?v=3"></script>
+    <link rel="stylesheet" href="/portfolio-assets/portfolio.css?v=3">
 </head>
 <body>
     <section id="portfolio-intro" class="portfolio-intro">
@@ -108,13 +108,13 @@
                     <div id="portfolio-loading" class="loading-state"><p>Querying Sam…</p></div>
                     <div id="portfolio-empty" class="results-empty" hidden><h3>Nothing matched that.</h3><p>Apparently Sam remains mysterious.</p></div>
                     <div id="portfolio-error" class="results-empty error-state" hidden><h3>The query got grumpy.</h3><p id="portfolio-error-message">Try again in a moment.</p></div>
-                    <div class="table-scroll"><table id="portfolio-results-table"></table></div>
+                    <div class="records-scroll"><div id="portfolio-results-table" class="records-list"></div></div>
                 </div>
             </section>
         </main>
     </section>
 
     <div id="portfolio-toasts" class="toast-region" aria-live="polite"></div>
-    <script src="/portfolio-assets/portfolio.js?v=2"></script>
+    <script src="/portfolio-assets/portfolio.js?v=3"></script>
 </body>
 </html>

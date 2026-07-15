@@ -81,15 +81,8 @@ function renderPortfolioTables() {
 }
 
 function renderPortfolioFilters() {
-    const filterable = portfolioState.columns.filter((column) => Array.isArray(column.options) && column.options.some((value) => value !== null));
-    ui.filterBar.hidden = !filterable.length;
-    ui.filters.innerHTML = filterable.map((column) => {
-        const current = portfolioState.filters[column.name]?.[0] || '';
-        const options = column.options.filter((value) => value !== null).map((value) => `<option value="${pEscape(value)}" ${String(value) === current ? 'selected' : ''}>${pEscape(value)}</option>`).join('');
-        return `<label class="filter-select ${current ? 'active' : ''}"><select data-portfolio-filter="${pEscape(column.name)}" aria-label="Filter by ${pEscape(column.name)}"><option value="">${pEscape(column.name)} · all</option>${options}</select>${pIcon('chevron-down')}</label>`;
-    }).join('');
-    ui.clearFilters.hidden = !Object.keys(portfolioState.filters).length;
-    pIcons();
+    ui.filterBar.hidden = true;
+    ui.filters.innerHTML = '';
 }
 
 function draftKey(row, column) { return `${portfolioState.table}:${row.id}:${column}`; }
@@ -123,13 +116,26 @@ function renderPortfolioResults() {
     if (!rows.length) { ui.table.innerHTML = ''; setPortfolioView('empty'); return; }
 
     const names = portfolioState.columns.map((column) => column.name);
-    ui.table.innerHTML = `<thead><tr><th class="row-index">#</th>${names.map((name) => `<th>${pEscape(name)}</th>`).join('')}</tr></thead><tbody>${rows.map((row, rowIndex) => `
-        <tr><td class="row-index">${String(rowIndex + 1).padStart(2, '0')}</td>${names.map((name) => {
+    ui.table.innerHTML = rows.map((row, rowIndex) => {
+        const canonical = portfolioState.results[rowIndex];
+        const fields = names.map((name) => {
             const column = portfolioState.columns.find((item) => item.name === name);
-            const editable = column && portfolioTextTypes.has(column.type) && name !== 'id';
-            const drafted = portfolioState.drafts.has(draftKey(portfolioState.results[rowIndex], name));
-            return `<td class="${drafted ? 'local-draft' : ''}"><div class="cell"><span class="cell-value" title="${pEscape(row[name] ?? 'null')}">${pValue(row[name])}</span>${editable ? `<button type="button" class="edit-cell-btn" data-p-edit-row="${rowIndex}" data-p-edit-column="${pEscape(name)}" aria-label="Edit ${pEscape(name)} locally">${pIcon('pencil')}</button>` : ''}</div></td>`;
-        }).join('')}</tr>`).join('')}</tbody>`;
+            const drafted = portfolioState.drafts.has(draftKey(canonical, name));
+            const canSelect = name !== 'id' && column && Array.isArray(column.options) && column.options.length > 0;
+            const canEditText = name !== 'id' && column && portfolioTextTypes.has(column.type);
+
+            if (canSelect) {
+                const current = String(row[name] ?? '');
+                const values = column.options.filter((value) => value !== null).map(String);
+                if (current && !values.includes(current)) values.unshift(current);
+                const options = values.map((value) => `<option value="${pEscape(value)}" ${value === current ? 'selected' : ''}>${pEscape(value)}</option>`).join('');
+                return `<label class="record-field record-field-select ${drafted ? 'local-draft' : ''}"><span class="record-label">${pEscape(name)}</span><select data-p-select-row="${rowIndex}" data-p-select-column="${pEscape(name)}">${options}</select></label>`;
+            }
+
+            return `<div class="record-field ${drafted ? 'local-draft' : ''}"><span class="record-label">${pEscape(name)}</span><div class="record-field-value"><span class="cell-value" title="${pEscape(row[name] ?? 'null')}">${pValue(row[name])}</span>${canEditText ? `<button type="button" class="edit-cell-btn" data-p-edit-row="${rowIndex}" data-p-edit-column="${pEscape(name)}" aria-label="Edit ${pEscape(name)} locally">${pIcon('pencil')}</button>` : ''}</div></div>`;
+        }).join('');
+        return `<article class="record-card"><header class="record-card-header">record #${pEscape(row.id ?? rowIndex + 1)}</header><div class="record-fields">${fields}</div></article>`;
+    }).join('');
     setPortfolioView('ready');
     updateDraftBadge();
     pIcons();
@@ -177,7 +183,7 @@ function beginPortfolioEdit(button) {
     const column = button.dataset.pEditColumn;
     const canonical = portfolioState.results[rowIndex];
     const current = applyDrafts(canonical)[column] ?? '';
-    const cell = button.closest('.cell');
+    const cell = button.closest('.record-field-value');
     cell.innerHTML = `<div class="cell-editor"><input type="text" value="${pEscape(current)}"><button type="button" class="save-edit" aria-label="Keep local draft">${pIcon('check')}</button><button type="button" class="cancel-edit" aria-label="Cancel">${pIcon('x')}</button></div>`;
     const input = cell.querySelector('input');
     input.focus(); input.select(); pIcons();
@@ -222,6 +228,15 @@ ui.filters.addEventListener('change', (event) => {
 });
 ui.clearFilters.addEventListener('click', () => { portfolioState.filters = {}; renderPortfolioFilters(); runPortfolioQuery(); });
 ui.table.addEventListener('click', (event) => { const button = event.target.closest('[data-p-edit-row]'); if (button) beginPortfolioEdit(button); });
+ui.table.addEventListener('change', (event) => {
+    const select = event.target.closest('[data-p-select-row]');
+    if (!select) return;
+    const rowIndex = Number(select.dataset.pSelectRow);
+    const column = select.dataset.pSelectColumn;
+    portfolioState.drafts.set(draftKey(portfolioState.results[rowIndex], column), select.value);
+    renderPortfolioResults();
+    pToast('Local draft applied. Canonical Sam remains untouched.');
+});
 $p('#reset-drafts').addEventListener('click', () => { portfolioState.drafts.clear(); renderPortfolioResults(); pToast('All local drafts cleared. Back to canonical Sam.'); });
 
 document.addEventListener('keydown', (event) => {

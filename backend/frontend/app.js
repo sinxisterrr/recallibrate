@@ -49,6 +49,12 @@ const elements = {
 };
 
 const textTypes = new Set(['text', 'character varying', 'varchar', 'character', 'char']);
+const selectableTypes = new Set([
+    ...textTypes,
+    'boolean', 'smallint', 'integer', 'bigint', 'numeric', 'decimal',
+    'real', 'double precision', 'date', 'timestamp without time zone',
+    'timestamp with time zone', 'uuid', 'USER-DEFINED',
+]);
 
 function icon(name) {
     return `<i data-lucide="${name}"></i>`;
@@ -69,7 +75,7 @@ function escapeHtml(value) {
 
 function friendlyError(error) {
     const raw = error?.message || 'Something went wrong.';
-    if (/fetch|network/i.test(raw)) return 'Could not reach Recallibrate. Make sure the local server is running.';
+    if (/fetch|network/i.test(raw)) return 'Recallibrate did not respond. Try again in a moment.';
     if (/password authentication|authentication failed/i.test(raw)) return 'The database rejected those credentials.';
     if (/could not translate host|name or service/i.test(raw)) return 'That database host could not be found.';
     return raw;
@@ -151,22 +157,8 @@ function setResultsState(mode, message = '') {
 }
 
 function renderFilters() {
-    const filterable = state.columns.filter((column) => Array.isArray(column.options) && column.options.some((value) => value !== null));
-    elements.filterBar.hidden = filterable.length === 0;
-    elements.filters.innerHTML = filterable.map((column) => {
-        const current = state.filters[column.name]?.[0] ?? '';
-        const options = column.options.filter((value) => value !== null).map((value) => {
-            const serialized = String(value);
-            return `<option value="${escapeHtml(serialized)}" ${serialized === current ? 'selected' : ''}>${escapeHtml(serialized)}</option>`;
-        }).join('');
-        return `<label class="filter-select ${current ? 'active' : ''}">
-            <select data-filter-column="${escapeHtml(column.name)}" aria-label="Filter by ${escapeHtml(column.name)}">
-                <option value="">${escapeHtml(column.name)} · all</option>${options}
-            </select>${icon('chevron-down')}
-        </label>`;
-    }).join('');
-    elements.clearFilters.hidden = Object.keys(state.filters).length === 0;
-    refreshIcons();
+    elements.filterBar.hidden = true;
+    elements.filters.innerHTML = '';
 }
 
 function formattedValue(value) {
@@ -192,17 +184,35 @@ function renderResults() {
 
     const columns = state.columns.length ? state.columns.map((column) => column.name) : Object.keys(state.results[0]);
     const hasId = columns.includes('id');
-    const header = `<thead><tr><th class="row-index">#</th>${columns.map((column) => `<th>${escapeHtml(column)}</th>`).join('')}${hasId ? '<th class="actions-column">—</th>' : ''}</tr></thead>`;
-    const rows = state.results.map((row, rowIndex) => {
-        const cells = columns.map((columnName) => {
+    elements.resultsTable.innerHTML = state.results.map((row, rowIndex) => {
+        const fields = columns.map((columnName) => {
             const column = state.columns.find((item) => item.name === columnName);
-            const editable = hasId && column && textTypes.has(column.type) && columnName !== 'id';
-            return `<td><div class="cell"><span class="cell-value" title="${escapeHtml(row[columnName] ?? 'null')}">${formattedValue(row[columnName])}</span>${editable ? `<button type="button" class="edit-cell-btn" data-edit-row="${rowIndex}" data-edit-column="${escapeHtml(columnName)}" aria-label="Edit ${escapeHtml(columnName)}">${icon('pencil')}</button>` : ''}</div></td>`;
+            const currentValue = row[columnName];
+            const canSelect = hasId && columnName !== 'id' && column && selectableTypes.has(column.type) && Array.isArray(column.options) && column.options.length > 0;
+            const canWriteText = hasId && columnName !== 'id' && column && textTypes.has(column.type);
+
+            if (canSelect) {
+                const current = String(currentValue ?? '');
+                const values = column.options.filter((value) => value !== null).map(String);
+                if (current && !values.includes(current)) values.unshift(current);
+                const options = values.map((value) => `<option value="${escapeHtml(value)}" ${value === current ? 'selected' : ''}>${escapeHtml(value)}</option>`).join('');
+                return `<label class="record-field record-field-select">
+                    <span class="record-label">${escapeHtml(columnName)}</span>
+                    <select data-select-row="${rowIndex}" data-select-column="${escapeHtml(columnName)}">${options}</select>
+                </label>`;
+            }
+
+            return `<div class="record-field">
+                <span class="record-label">${escapeHtml(columnName)}</span>
+                <div class="record-field-value"><span class="cell-value" title="${escapeHtml(currentValue ?? 'null')}">${formattedValue(currentValue)}</span>${canWriteText ? `<button type="button" class="edit-cell-btn" data-edit-row="${rowIndex}" data-edit-column="${escapeHtml(columnName)}" aria-label="Edit ${escapeHtml(columnName)}">${icon('pencil')}</button>` : ''}</div>
+            </div>`;
         }).join('');
-        const actions = hasId ? `<td class="actions-column"><button type="button" class="delete-row-btn" data-delete-row="${rowIndex}" aria-label="Delete record">${icon('trash-2')}</button></td>` : '';
-        return `<tr><td class="row-index">${String(rowIndex + 1).padStart(2, '0')}</td>${cells}${actions}</tr>`;
+        const identifier = row.id === undefined ? `record ${rowIndex + 1}` : `record #${escapeHtml(row.id)}`;
+        return `<article class="record-card">
+            <header class="record-card-header"><span>${identifier}</span>${hasId ? `<button type="button" class="delete-row-btn" data-delete-row="${rowIndex}" aria-label="Delete record">${icon('trash-2')}</button>` : ''}</header>
+            <div class="record-fields">${fields}</div>
+        </article>`;
     }).join('');
-    elements.resultsTable.innerHTML = `${header}<tbody>${rows}</tbody>`;
     setResultsState('ready');
     refreshIcons();
 }
@@ -265,7 +275,7 @@ function beginEdit(button) {
     const rowIndex = Number(button.dataset.editRow);
     const column = button.dataset.editColumn;
     const row = state.results[rowIndex];
-    const cell = button.closest('.cell');
+    const cell = button.closest('.record-field-value');
     const original = row[column] ?? '';
     cell.innerHTML = `<div class="cell-editor"><input type="text" value="${escapeHtml(original)}" aria-label="New value for ${escapeHtml(column)}"><button type="button" class="save-edit" aria-label="Save">${icon('check')}</button><button type="button" class="cancel-edit" aria-label="Cancel">${icon('x')}</button></div>`;
     const input = cell.querySelector('input');
@@ -378,6 +388,10 @@ elements.resultsTable.addEventListener('click', (event) => {
     const remove = event.target.closest('[data-delete-row]');
     if (edit) beginEdit(edit);
     if (remove) requestDelete(Number(remove.dataset.deleteRow));
+});
+elements.resultsTable.addEventListener('change', (event) => {
+    const select = event.target.closest('[data-select-row]');
+    if (select) saveEdit(Number(select.dataset.selectRow), select.dataset.selectColumn, select.value);
 });
 elements.deleteDialog.addEventListener('close', () => {
     if (elements.deleteDialog.returnValue === 'confirm') confirmDelete();
