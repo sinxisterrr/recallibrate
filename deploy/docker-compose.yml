@@ -1,0 +1,58 @@
+services:
+  db:
+    image: postgres:17-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: recallibrate_demo
+      POSTGRES_USER: recallibrate_admin
+      POSTGRES_PASSWORD: ${POSTGRES_ADMIN_PASSWORD}
+      DEMO_READER_PASSWORD: ${DEMO_READER_PASSWORD}
+    volumes:
+      - recallibrate-demo-data:/var/lib/postgresql/data
+      - ./init:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U recallibrate_admin -d recallibrate_demo"]
+      interval: 5s
+      timeout: 5s
+      retries: 12
+    networks:
+      - private
+
+  app:
+    build:
+      context: ../backend
+    restart: unless-stopped
+    environment:
+      DEMO_DATABASE_URL: postgresql://recallibrate_reader:${DEMO_READER_PASSWORD}@db:5432/recallibrate_demo
+      RECALLIBRATE_PORTFOLIO_ONLY: "true"
+    depends_on:
+      db:
+        condition: service_healthy
+    labels:
+      - traefik.enable=true
+      - traefik.docker.network=coolify
+      - traefik.http.middlewares.recallibrate-gzip.compress=true
+      - traefik.http.middlewares.recallibrate-https.redirectscheme.scheme=https
+      - traefik.http.routers.recallibrate-http.entrypoints=http
+      - traefik.http.routers.recallibrate-http.rule=Host(`recallibrate.app`) && (PathPrefix(`/portfolio`) || PathPrefix(`/api/portfolio`))
+      - traefik.http.routers.recallibrate-http.middlewares=recallibrate-https
+      - traefik.http.routers.recallibrate-https.entrypoints=https
+      - traefik.http.routers.recallibrate-https.rule=Host(`recallibrate.app`) && (PathPrefix(`/portfolio`) || PathPrefix(`/api/portfolio`))
+      - traefik.http.routers.recallibrate-https.tls=true
+      - traefik.http.routers.recallibrate-https.tls.certresolver=letsencrypt
+      - traefik.http.routers.recallibrate-https.middlewares=recallibrate-gzip
+      - traefik.http.services.recallibrate.loadbalancer.server.port=8000
+      - traefik.http.routers.recallibrate-http.service=recallibrate
+      - traefik.http.routers.recallibrate-https.service=recallibrate
+    networks:
+      - private
+      - coolify
+
+volumes:
+  recallibrate-demo-data:
+
+networks:
+  private:
+    internal: true
+  coolify:
+    external: true

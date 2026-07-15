@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="color-scheme" content="dark">
+    <title>Sam, queried — a Recallibrate demo</title>
+    <meta name="description" content="A live, queryable portfolio disguised as a PostgreSQL database.">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600&family=IBM+Plex+Mono:ital,wght@0,400;0,500;1,500&display=swap" rel="stylesheet">
+    <script src="/portfolio-assets/lucide.min.js"></script>
+    <link rel="stylesheet" href="/portfolio-assets/style.css">
+    <link rel="stylesheet" href="/portfolio-assets/portfolio.css">
+</head>
+<body>
+    <div class="portfolio-noise" aria-hidden="true"></div>
+
+    <section id="portfolio-intro" class="portfolio-intro">
+        <header class="portfolio-nav">
+            <a class="wordmark" href="/portfolio"><em>recall</em><span>ibrate</span><b>·</b></a>
+            <span class="portfolio-tag">PORTFOLIO DATABASE / READ ONLY*</span>
+        </header>
+
+        <main class="portfolio-hero">
+            <div class="hero-copy">
+                <div class="eyebrow"><span></span> An interactive portfolio by Sam</div>
+                <h1>Go ahead.<br><em>Query me.</em></h1>
+                <p class="hero-lede">A real PostgreSQL database full of projects, skills, opinions, and tiny pieces of lore—wearing a database manager as its portfolio.</p>
+                <button type="button" id="enter-portfolio" class="purple-btn"><span>SELECT * FROM sam</span><i data-lucide="arrow-right"></i></button>
+                <p class="edit-promise"><i data-lucide="sparkles"></i> *You can edit things. Your chaos stays in this tab.</p>
+            </div>
+
+            <div class="query-art" aria-hidden="true">
+                <div class="query-window">
+                    <div class="query-window-head"><span></span><span></span><span></span><b>sam.db</b></div>
+                    <pre><code><span class="sql-key">SELECT</span> curiosity, stubbornness,
+       current_obsession
+<span class="sql-key">FROM</span> sam_lore
+<span class="sql-key">WHERE</span> boring = <span class="sql-value">false</span>;</code></pre>
+                    <div class="query-result">
+                        <span>5 rows returned</span>
+                        <strong>↳ probably oversharing</strong>
+                    </div>
+                </div>
+                <span class="floating-note note-one">ACTUAL DATA</span>
+                <span class="floating-note note-two">EDITABLE*</span>
+                <span class="floating-note note-three">A LITTLE WEIRD</span>
+            </div>
+        </main>
+
+        <footer class="portfolio-footer"><span>PostgreSQL · FastAPI · Vanilla JS</span><span>80.65.211.88° somewhere on the internet</span></footer>
+    </section>
+
+    <section id="portfolio-workspace" class="workspace-view portfolio-workspace" hidden>
+        <aside class="sidebar">
+            <div class="sidebar-head">
+                <button type="button" class="wordmark wordmark-button" id="portfolio-home"><em>recall</em><span>ibrate</span><b>·</b></button>
+                <div class="connection-state"><span></span> live demo</div>
+            </div>
+            <div class="database-owner">
+                <span class="owner-avatar">S</span>
+                <div><strong>sam.db</strong><small>public portfolio dataset</small></div>
+            </div>
+            <div class="sidebar-section-label"><span>Tables</span><strong id="portfolio-table-count">0</strong></div>
+            <label class="sidebar-search" for="portfolio-table-filter"><i data-lucide="search"></i><input type="search" id="portfolio-table-filter" placeholder="Find a table"><kbd>/</kbd></label>
+            <nav id="portfolio-tables" class="table-list" aria-label="Portfolio tables"></nav>
+            <div class="sidebar-foot">
+                <div class="session-note"><i data-lucide="shield-check"></i><span>Canonical data protected<br><small>Edits are temporary</small></span></div>
+                <button type="button" id="reset-drafts" class="icon-btn" aria-label="Reset all draft edits"><i data-lucide="rotate-ccw"></i></button>
+            </div>
+        </aside>
+
+        <main class="workspace-main">
+            <header class="workspace-header">
+                <div class="breadcrumb"><span>sam.db</span><i data-lucide="chevron-right"></i><strong id="portfolio-table-name">—</strong></div>
+                <div class="workspace-header-actions">
+                    <span id="draft-badge" class="draft-badge" hidden><i data-lucide="pencil"></i><b>0</b> local drafts</span>
+                    <span class="connection-label">PostgreSQL / live</span>
+                </div>
+            </header>
+
+            <section class="table-workspace">
+                <div class="table-title-row">
+                    <div><div class="eyebrow"><span></span> Browse the evidence</div><h2 id="portfolio-table-heading">—</h2></div>
+                    <div class="table-meta"><div><span>ROWS</span><strong id="portfolio-result-count">—</strong></div><div><span>COLUMNS</span><strong id="portfolio-column-count">—</strong></div></div>
+                </div>
+
+                <form id="portfolio-search-form" class="search-toolbar" role="search">
+                    <label class="global-search" for="portfolio-search"><i data-lucide="search"></i><input type="search" id="portfolio-search" placeholder="Search Sam's brain…"><kbd>↵</kbd></label>
+                    <label class="fuzzy-toggle"><input type="checkbox" id="portfolio-fuzzy"><span class="switch"></span><span><strong>Fuzzy</strong><small>close counts</small></span></label>
+                    <button type="button" id="portfolio-refresh" class="secondary-btn"><i data-lucide="refresh-cw"></i><span>Refresh</span></button>
+                </form>
+
+                <div id="portfolio-filter-bar" class="filter-bar" hidden><span class="filter-label"><i data-lucide="list-filter"></i> Filter by</span><div id="portfolio-filters" class="filters"></div><button type="button" id="portfolio-clear-filters" class="text-btn" hidden>Clear all</button></div>
+                <div class="results-head"><p id="portfolio-results-description">Loading canonical data…</p><span><i data-lucide="wand-sparkles"></i> Pencil edits become local drafts</span></div>
+                <div class="results-shell">
+                    <div id="portfolio-loading" class="loading-state"><span></span><span></span><span></span><p>Querying Sam…</p></div>
+                    <div id="portfolio-empty" class="results-empty" hidden><i data-lucide="scan-search"></i><h3>Nothing matched that.</h3><p>Apparently Sam remains mysterious.</p></div>
+                    <div id="portfolio-error" class="results-empty error-state" hidden><i data-lucide="circle-alert"></i><h3>The query got grumpy.</h3><p id="portfolio-error-message">Try again in a moment.</p></div>
+                    <div class="table-scroll"><table id="portfolio-results-table"></table></div>
+                </div>
+            </section>
+        </main>
+    </section>
+
+    <div id="portfolio-toasts" class="toast-region" aria-live="polite"></div>
+    <script src="/portfolio-assets/portfolio.js"></script>
+</body>
+</html>

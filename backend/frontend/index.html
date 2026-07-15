@@ -3,47 +3,189 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>recallibrate</title>
-    <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;700&family=Raleway:wght@400;500&display=swap" rel="stylesheet">
+    <meta name="color-scheme" content="dark light">
+    <title>recallibrate — local database workbench</title>
+    <meta name="description" content="A private, local-first workspace for searching and editing PostgreSQL data.">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600&family=IBM+Plex+Mono:ital,wght@0,400;0,500;1,500&display=swap" rel="stylesheet">
     <script src="lucide.min.js"></script>
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
-    <header>
-        <h1 class="logo"><em>recall</em>ibrate</h1>
-        <div class="theme-toggle">
-                <button data-theme-btn="light"><i data-lucide="sun"></i></button>
-                <button data-theme-btn="system"><i data-lucide="monitor"></i></button>
-                <button data-theme-btn="dark"><i data-lucide="moon"></i></button>
-            <div class="pill"></div>
-        </div>
-    </header>
-        <main>
-            <section id="connect">
-                <input type="text" id="db-url" placeholder="postgres://...">
-                <button id="connect-btn">Connect</button>
-            </section>
-            <div id="table-view">
-                <button id="back-btn"><i data-lucide="arrow-left"></i></button>
-                <span id="table-name"></span>
-                <input type="text" id="search-input" placeholder="Search...">
+    <div class="ambient-grid" aria-hidden="true"></div>
+
+    <section id="connect-view" class="connect-view">
+        <header class="public-header">
+            <a class="wordmark" href="#" aria-label="Recallibrate home"><em>recall</em><span>ibrate</span><b>·</b></a>
+            <div class="theme-toggle" role="group" aria-label="Color theme">
+                <button type="button" data-theme-btn="light" aria-label="Light theme"><i data-lucide="sun"></i></button>
+                <button type="button" data-theme-btn="system" aria-label="Use system theme"><i data-lucide="monitor"></i></button>
+                <button type="button" data-theme-btn="dark" aria-label="Dark theme"><i data-lucide="moon"></i></button>
+                <span class="theme-pill" aria-hidden="true"></span>
             </div>
-            <input type="text" id="table-filter" placeholder="Filter tables...">
-            <section id="tables">
+        </header>
 
-            </section>
-            
-            <section id="search">
+        <main class="connect-main">
+            <div class="connect-copy">
+                <div class="eyebrow"><span></span> Local PostgreSQL workbench</div>
+                <h1>Bring your data<br><em>back into focus.</em></h1>
+                <p>Search, filter, and carefully edit the memory behind your machines—from one quiet, private workspace.</p>
 
+                <form id="connect-form" class="connection-card" novalidate>
+                    <div class="card-index" aria-hidden="true">01 / CONNECT</div>
+                    <label for="db-url">Database URL</label>
+                    <div class="url-field">
+                        <i data-lucide="database"></i>
+                        <input type="password" id="db-url" placeholder="postgresql://user:••••••@host/database" autocomplete="off" spellcheck="false" required>
+                        <button type="button" id="reveal-url" class="icon-btn" aria-label="Show database URL" aria-pressed="false"><i data-lucide="eye"></i></button>
+                    </div>
+                    <div class="connect-actions">
+                        <p><i data-lucide="shield-check"></i> Your credentials stay in this local session.</p>
+                        <button type="submit" id="connect-btn" class="primary-btn"><span>Open database</span><i data-lucide="arrow-up-right"></i></button>
+                    </div>
+                    <div id="connect-error" class="inline-error" role="alert" aria-live="polite"></div>
+                </form>
+            </div>
+
+            <div class="memory-map" aria-hidden="true">
+                <div class="map-label">LIVE SCHEMA / PREVIEW</div>
+                <div class="orbit orbit-one"></div>
+                <div class="orbit orbit-two"></div>
+                <div class="node node-a"><span>users</span><small>2,481 rows</small></div>
+                <div class="node node-b"><span>memories</span><small>18 columns</small></div>
+                <div class="node node-c"><span>messages</span><small>live</small></div>
+                <div class="node node-core"><i data-lucide="asterisk"></i></div>
+                <div class="coordinate coordinate-a">53.5461° N</div>
+                <div class="coordinate coordinate-b">LOCAL / PRIVATE</div>
+            </div>
+        </main>
+
+        <footer class="connect-footer">
+            <span>Built for the data you remember</span>
+            <span class="footer-line"></span>
+            <span>v0.2</span>
+        </footer>
+    </section>
+
+    <section id="workspace-view" class="workspace-view" hidden>
+        <aside class="sidebar">
+            <div class="sidebar-head">
+                <button type="button" class="wordmark wordmark-button" id="home-btn" aria-label="Disconnect and return home"><em>recall</em><span>ibrate</span><b>·</b></button>
+                <div class="connection-state"><span></span> connected</div>
+            </div>
+
+            <div class="sidebar-section-label">
+                <span>Database tables</span>
+                <strong id="table-count">0</strong>
+            </div>
+            <label class="sidebar-search" for="table-filter">
+                <i data-lucide="search"></i>
+                <input type="search" id="table-filter" placeholder="Find a table" autocomplete="off">
+                <kbd>/</kbd>
+            </label>
+            <nav id="tables" class="table-list" aria-label="Database tables"></nav>
+
+            <div class="sidebar-foot">
+                <div class="session-note"><i data-lucide="shield"></i><span>Local session<br><small>Credentials never saved</small></span></div>
+                <button type="button" id="disconnect-btn" class="icon-btn" aria-label="Disconnect"><i data-lucide="log-out"></i></button>
+            </div>
+        </aside>
+
+        <main class="workspace-main">
+            <header class="workspace-header">
+                <div class="breadcrumb"><span>public</span><i data-lucide="chevron-right"></i><strong id="table-name">Select a table</strong></div>
+                <div class="workspace-header-actions">
+                    <span id="connection-label" class="connection-label">PostgreSQL</span>
+                    <div class="theme-toggle compact" role="group" aria-label="Color theme">
+                        <button type="button" data-theme-btn="light" aria-label="Light theme"><i data-lucide="sun"></i></button>
+                        <button type="button" data-theme-btn="system" aria-label="Use system theme"><i data-lucide="monitor"></i></button>
+                        <button type="button" data-theme-btn="dark" aria-label="Dark theme"><i data-lucide="moon"></i></button>
+                        <span class="theme-pill" aria-hidden="true"></span>
+                    </div>
+                </div>
+            </header>
+
+            <section id="empty-workspace" class="empty-workspace">
+                <div class="empty-glyph"><i data-lucide="rows-3"></i></div>
+                <span>NO TABLE SELECTED</span>
+                <h2>Choose a table to begin.</h2>
+                <p>Its structure, filters, and live records will appear here.</p>
             </section>
-            
-            <section id="results">
-                
+
+            <section id="table-workspace" class="table-workspace" hidden>
+                <div class="table-title-row">
+                    <div>
+                        <div class="eyebrow"><span></span> Live table</div>
+                        <h2 id="table-heading">—</h2>
+                    </div>
+                    <div class="table-meta">
+                        <div><span>ROWS</span><strong id="result-count">—</strong></div>
+                        <div><span>COLUMNS</span><strong id="column-count">—</strong></div>
+                    </div>
+                </div>
+
+                <form id="search-form" class="search-toolbar" role="search">
+                    <label class="global-search" for="search-input">
+                        <i data-lucide="search"></i>
+                        <input type="search" id="search-input" placeholder="Search every text field…" autocomplete="off">
+                        <kbd>↵</kbd>
+                    </label>
+                    <label class="fuzzy-toggle">
+                        <input type="checkbox" id="fuzzy-toggle">
+                        <span class="switch" aria-hidden="true"></span>
+                        <span><strong>Fuzzy</strong><small>find near matches</small></span>
+                    </label>
+                    <button type="button" id="refresh-btn" class="secondary-btn"><i data-lucide="refresh-cw"></i><span>Refresh</span></button>
+                </form>
+
+                <div id="filter-bar" class="filter-bar" hidden>
+                    <span class="filter-label"><i data-lucide="list-filter"></i> Filter by</span>
+                    <div id="filters" class="filters"></div>
+                    <button type="button" id="clear-filters" class="text-btn" hidden>Clear all</button>
+                </div>
+
+                <div class="results-head">
+                    <p id="results-description">Showing current records</p>
+                    <span><i data-lucide="pencil-line"></i> Select a pencil to edit text</span>
+                </div>
+
+                <div id="results-shell" class="results-shell">
+                    <div id="loading-state" class="loading-state" hidden>
+                        <span></span><span></span><span></span>
+                        <p>Reading table…</p>
+                    </div>
+                    <div id="results-empty" class="results-empty" hidden>
+                        <i data-lucide="scan-search"></i>
+                        <h3>No matching records</h3>
+                        <p>Try a wider search or clear a filter.</p>
+                    </div>
+                    <div id="results-error" class="results-empty error-state" hidden>
+                        <i data-lucide="circle-alert"></i>
+                        <h3>Couldn’t read this table</h3>
+                        <p id="results-error-message">Check the connection and try again.</p>
+                    </div>
+                    <div class="table-scroll"><table id="results-table"></table></div>
+                </div>
             </section>
         </main>
-        <script src="app.js">
-            
-        </script>
+    </section>
 
+    <div id="toast-region" class="toast-region" aria-live="polite"></div>
+
+    <dialog id="delete-dialog" class="confirm-dialog">
+        <form method="dialog">
+            <div class="dialog-icon"><i data-lucide="trash-2"></i></div>
+            <span class="dialog-kicker">DESTRUCTIVE ACTION</span>
+            <h2>Delete this record?</h2>
+            <p>This will permanently remove it from <strong id="delete-table-name"></strong>. This cannot be undone.</p>
+            <div class="dialog-actions">
+                <button value="cancel" class="secondary-btn">Keep record</button>
+                <button value="confirm" class="danger-btn">Delete permanently</button>
+            </div>
+        </form>
+    </dialog>
+
+    <script src="app.js"></script>
 </body>
 </html>
