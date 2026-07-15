@@ -112,15 +112,19 @@ kbd { padding: 2px 5px; border: 1px solid var(--line); border-radius: 3px; color
 
 .results-shell { min-height: 0; flex: 1; border: 1px solid var(--line); border-radius: 7px; background: var(--surface); overflow: hidden; }
 .records-scroll { height: 100%; overflow-y: auto; }
-.records-list { display: grid; gap: 10px; padding: 11px; }
-.record-card { border: 1px solid var(--line); border-radius: 7px; background: var(--bg); overflow: hidden; }
-.record-card-header { min-height: 34px; padding: 0 11px; display: flex; align-items: center; border-bottom: 1px solid var(--line); color: var(--muted); font: 9px var(--mono); text-transform: uppercase; }
-.record-fields { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); }
-.record-field { min-width: 0; padding: 10px 12px; border-right: 1px solid var(--line); border-bottom: 1px solid var(--line); }
+.records-list { display: grid; gap: 18px; padding: 18px 11px 11px; }
+.record-card { position: relative; margin-top: 4px; border: 1px solid var(--line); border-radius: 7px; background: var(--bg); overflow: visible; }
+.record-card-header { min-height: 24px; padding: 0 11px; display: flex; align-items: center; color: var(--muted); font: 9px var(--mono); text-transform: uppercase; }
+.record-card-header > span { position: absolute; top: -7px; left: 12px; padding: 0 6px; background: var(--bg); }
+.record-body { padding: 5px 16px 14px; }
+.record-text-field + .record-text-field { margin-top: 14px; }
 .record-label { display: block; margin-bottom: 6px; color: var(--muted); font: 8px var(--mono); letter-spacing: .06em; text-transform: uppercase; }
-.record-field-value { min-height: 29px; display: flex; align-items: center; gap: 7px; }
-.record-field select { width: 100%; height: 31px; padding: 0 7px; border: 1px solid var(--line); border-radius: 4px; color: var(--text); background: var(--surface); font: 10px var(--mono); }
-.cell-value { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.record-field-value { min-height: 29px; display: flex; align-items: flex-start; gap: 9px; }
+.record-divider { height: 1px; margin: 0 12px; background: linear-gradient(90deg, transparent, var(--line) 14%, var(--line) 86%, transparent); }
+.record-options { display: flex; flex-wrap: wrap; gap: 10px; padding: 12px 16px 15px; }
+.record-option { min-width: 140px; flex: 1 1 170px; }
+.record-option select { width: 100%; height: 31px; padding: 0 7px; border: 1px solid var(--line); border-radius: 4px; color: var(--text); background: var(--surface); font: 10px var(--mono); }
+.cell-value { min-width: 0; flex: 1; white-space: normal; overflow-wrap: anywhere; line-height: 1.55; }
 .cell-null { color: var(--muted); font: italic 10px var(--mono); }
 .cell-boolean { font: 10px var(--mono); }
 .edit-cell-btn { width: 26px; height: 26px; flex: 0 0 auto; display: grid; place-items: center; border: 0; border-radius: 5px; color: var(--muted); background: transparent; cursor: pointer; }
@@ -162,5 +166,5 @@ kbd { padding: 2px 5px; border: 1px solid var(--line); border-radius: 3px; color
     .workspace-header { height: 58px; padding: 0 15px; }
     .table-workspace { padding: 18px 12px 14px; }
     .results-head span { display: none; }
-    .record-fields { grid-template-columns: 1fr; }
+    .record-options { display: grid; grid-template-columns: 1fr; }
 }

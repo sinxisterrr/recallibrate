@@ -9,6 +9,7 @@ const portfolioState = {
 
 const $p = (selector) => document.querySelector(selector);
 const portfolioTextTypes = new Set(['text', 'character varying', 'varchar', 'character', 'char']);
+const portfolioSelectFields = new Set(['category', 'energy', 'status', 'stack', 'confidence', 'intensity', 'negotiable', 'kind', 'current']);
 
 const ui = {
     intro: $p('#portfolio-intro'),
@@ -118,10 +119,12 @@ function renderPortfolioResults() {
     const names = portfolioState.columns.map((column) => column.name);
     ui.table.innerHTML = rows.map((row, rowIndex) => {
         const canonical = portfolioState.results[rowIndex];
-        const fields = names.map((name) => {
+        const bodyFields = [];
+        const optionFields = [];
+        names.filter((name) => name !== 'id').forEach((name) => {
             const column = portfolioState.columns.find((item) => item.name === name);
             const drafted = portfolioState.drafts.has(draftKey(canonical, name));
-            const canSelect = name !== 'id' && column && Array.isArray(column.options) && column.options.length > 0;
+            const canSelect = portfolioSelectFields.has(name) && column && Array.isArray(column.options) && column.options.length > 0;
             const canEditText = name !== 'id' && column && portfolioTextTypes.has(column.type);
 
             if (canSelect) {
@@ -129,12 +132,18 @@ function renderPortfolioResults() {
                 const values = column.options.filter((value) => value !== null).map(String);
                 if (current && !values.includes(current)) values.unshift(current);
                 const options = values.map((value) => `<option value="${pEscape(value)}" ${value === current ? 'selected' : ''}>${pEscape(value)}</option>`).join('');
-                return `<label class="record-field record-field-select ${drafted ? 'local-draft' : ''}"><span class="record-label">${pEscape(name)}</span><select data-p-select-row="${rowIndex}" data-p-select-column="${pEscape(name)}">${options}</select></label>`;
+                optionFields.push(`<label class="record-option ${drafted ? 'local-draft' : ''}"><span class="record-label">${pEscape(name)}</span><select data-p-select-row="${rowIndex}" data-p-select-column="${pEscape(name)}">${options}</select></label>`);
+                return;
             }
 
-            return `<div class="record-field ${drafted ? 'local-draft' : ''}"><span class="record-label">${pEscape(name)}</span><div class="record-field-value"><span class="cell-value" title="${pEscape(row[name] ?? 'null')}">${pValue(row[name])}</span>${canEditText ? `<button type="button" class="edit-cell-btn" data-p-edit-row="${rowIndex}" data-p-edit-column="${pEscape(name)}" aria-label="Edit ${pEscape(name)} locally">${pIcon('pencil')}</button>` : ''}</div></div>`;
-        }).join('');
-        return `<article class="record-card"><header class="record-card-header">record #${pEscape(row.id ?? rowIndex + 1)}</header><div class="record-fields">${fields}</div></article>`;
+            bodyFields.push(`<div class="record-text-field ${drafted ? 'local-draft' : ''}"><span class="record-label">${pEscape(name)}</span><div class="record-field-value"><span class="cell-value" title="${pEscape(row[name] ?? 'null')}">${pValue(row[name])}</span>${canEditText ? `<button type="button" class="edit-cell-btn" data-p-edit-row="${rowIndex}" data-p-edit-column="${pEscape(name)}" aria-label="Edit ${pEscape(name)} locally">${pIcon('pencil')}</button>` : ''}</div></div>`);
+        });
+        return `<article class="record-card">
+            <header class="record-card-header"><span>record #${pEscape(row.id ?? rowIndex + 1)}</span></header>
+            ${bodyFields.length ? `<div class="record-body">${bodyFields.join('')}</div>` : ''}
+            ${bodyFields.length && optionFields.length ? '<div class="record-divider" aria-hidden="true"></div>' : ''}
+            ${optionFields.length ? `<div class="record-options">${optionFields.join('')}</div>` : ''}
+        </article>`;
     }).join('');
     setPortfolioView('ready');
     updateDraftBadge();

@@ -185,7 +185,9 @@ function renderResults() {
     const columns = state.columns.length ? state.columns.map((column) => column.name) : Object.keys(state.results[0]);
     const hasId = columns.includes('id');
     elements.resultsTable.innerHTML = state.results.map((row, rowIndex) => {
-        const fields = columns.map((columnName) => {
+        const bodyFields = [];
+        const optionFields = [];
+        columns.filter((columnName) => columnName !== 'id').forEach((columnName) => {
             const column = state.columns.find((item) => item.name === columnName);
             const currentValue = row[columnName];
             const canSelect = hasId && columnName !== 'id' && column && selectableTypes.has(column.type) && Array.isArray(column.options) && column.options.length > 0;
@@ -196,21 +198,24 @@ function renderResults() {
                 const values = column.options.filter((value) => value !== null).map(String);
                 if (current && !values.includes(current)) values.unshift(current);
                 const options = values.map((value) => `<option value="${escapeHtml(value)}" ${value === current ? 'selected' : ''}>${escapeHtml(value)}</option>`).join('');
-                return `<label class="record-field record-field-select">
+                optionFields.push(`<label class="record-option">
                     <span class="record-label">${escapeHtml(columnName)}</span>
                     <select data-select-row="${rowIndex}" data-select-column="${escapeHtml(columnName)}">${options}</select>
-                </label>`;
+                </label>`);
+                return;
             }
 
-            return `<div class="record-field">
+            bodyFields.push(`<div class="record-text-field">
                 <span class="record-label">${escapeHtml(columnName)}</span>
                 <div class="record-field-value"><span class="cell-value" title="${escapeHtml(currentValue ?? 'null')}">${formattedValue(currentValue)}</span>${canWriteText ? `<button type="button" class="edit-cell-btn" data-edit-row="${rowIndex}" data-edit-column="${escapeHtml(columnName)}" aria-label="Edit ${escapeHtml(columnName)}">${icon('pencil')}</button>` : ''}</div>
-            </div>`;
-        }).join('');
+            </div>`);
+        });
         const identifier = row.id === undefined ? `record ${rowIndex + 1}` : `record #${escapeHtml(row.id)}`;
         return `<article class="record-card">
             <header class="record-card-header"><span>${identifier}</span>${hasId ? `<button type="button" class="delete-row-btn" data-delete-row="${rowIndex}" aria-label="Delete record">${icon('trash-2')}</button>` : ''}</header>
-            <div class="record-fields">${fields}</div>
+            ${bodyFields.length ? `<div class="record-body">${bodyFields.join('')}</div>` : ''}
+            ${bodyFields.length && optionFields.length ? '<div class="record-divider" aria-hidden="true"></div>' : ''}
+            ${optionFields.length ? `<div class="record-options">${optionFields.join('')}</div>` : ''}
         </article>`;
     }).join('');
     setResultsState('ready');
