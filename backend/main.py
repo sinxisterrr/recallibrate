@@ -455,7 +455,7 @@ async def search_entries(request: Request, payload: SearchRequest):
 
         if payload.date_to and "created_at" in column_types:
             args.append(payload.date_to)
-            conditions.append(f"{quote_identifier('created_at')} <= ${len(args)}")
+            conditions.append(f"{quote_identifier('created_at')} < ${len(args)} + INTERVAL '1 day'")
 
         where_clause = f"WHERE {' AND '.join(conditions)}" if conditions else ""
         rows = await conn.fetch(

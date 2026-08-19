@@ -238,7 +238,11 @@ kbd { border: 1px solid var(--line); border-radius: 4px; color: var(--faint); pa
 .filter-bar { display: flex; align-items: center; gap: 10px; padding: 15px 0 0; overflow-x: auto; }
 .filter-label { display: inline-flex; align-items: center; gap: 6px; flex: 0 0 auto; color: var(--muted); font: 9px var(--mono); text-transform: uppercase; letter-spacing: .08em; }
 .filter-label svg { width: 14px; }
-.filters { display: flex; gap: 7px; }
+.filters { display: flex; align-items: center; gap: 7px; }
+.date-filter { min-height: 34px; display: inline-flex; align-items: center; gap: 8px; padding: 0 9px; border: 1px solid var(--line); border-radius: 7px; background: var(--surface); color: var(--muted); font: 9px var(--mono); text-transform: uppercase; letter-spacing: .05em; white-space: nowrap; }
+.date-filter input { border: 0; outline: 0; padding: 0; background: transparent; color: var(--ink); font: 10px var(--mono); color-scheme: light dark; }
+.date-filter:focus-within, .date-filter.active { border-color: var(--signal); background: var(--signal-soft); }
+.date-filter-separator { color: var(--faint); font: 11px var(--mono); }
 .filter-select { position: relative; }
 .filter-select select { appearance: none; min-width: 135px; height: 34px; padding: 0 30px 0 10px; border: 1px solid var(--line); border-radius: 7px; background: var(--surface); color: var(--ink); font: 10px var(--mono); cursor: pointer; }
 .filter-select svg { position: absolute; width: 13px; right: 9px; top: 10px; pointer-events: none; color: var(--muted); }

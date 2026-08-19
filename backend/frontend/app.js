@@ -10,6 +10,8 @@ const state = {
     query: '',
     fuzzy: false,
     filters: {},
+    dateFrom: '',
+    dateTo: '',
     pendingDeleteIndex: null,
 };
 
@@ -148,7 +150,7 @@ function showWorkspace() {
 }
 
 function showAssignmentView() {
-    Object.assign(state, { tables: [], activeTable: null, columns: [], results: [], query: '', fuzzy: false, filters: {} });
+    Object.assign(state, { tables: [], activeTable: null, columns: [], results: [], query: '', fuzzy: false, filters: {}, dateFrom: '', dateTo: '' });
     elements.tableFilter.value = '';
     elements.searchInput.value = '';
     elements.connectError.textContent = '';
@@ -343,8 +345,19 @@ function setResultsState(mode, message = '') {
 }
 
 function renderFilters() {
-    elements.filterBar.hidden = true;
-    elements.filters.innerHTML = '';
+    const hasCreatedAt = state.columns.some((column) => column.name === 'created_at');
+    elements.filterBar.hidden = !hasCreatedAt;
+    elements.filters.innerHTML = hasCreatedAt ? `
+        <label class="date-filter ${state.dateFrom ? 'active' : ''}">
+            <span>From</span>
+            <input type="date" data-date-bound="from" value="${escapeHtml(state.dateFrom)}" max="${escapeHtml(state.dateTo)}">
+        </label>
+        <span class="date-filter-separator" aria-hidden="true">→</span>
+        <label class="date-filter ${state.dateTo ? 'active' : ''}">
+            <span>Through</span>
+            <input type="date" data-date-bound="to" value="${escapeHtml(state.dateTo)}" min="${escapeHtml(state.dateFrom)}">
+        </label>` : '';
+    elements.clearFilters.hidden = !(Object.keys(state.filters).length || state.dateFrom || state.dateTo);
 }
 
 function formattedValue(value) {
@@ -357,7 +370,7 @@ function formattedValue(value) {
 function renderResults() {
     elements.resultCount.textContent = state.results.length.toLocaleString();
     elements.columnCount.textContent = state.columns.length.toLocaleString();
-    const hasSearch = Boolean(state.query || Object.keys(state.filters).length);
+    const hasSearch = Boolean(state.query || Object.keys(state.filters).length || state.dateFrom || state.dateTo);
     elements.resultsDescription.textContent = hasSearch
         ? `${state.results.length.toLocaleString()} matching record${state.results.length === 1 ? '' : 's'}`
         : `Showing ${state.results.length.toLocaleString()} current record${state.results.length === 1 ? '' : 's'}`;
@@ -422,6 +435,8 @@ async function searchTable() {
                 query: state.query,
                 filters: state.filters,
                 fuzzy: state.fuzzy,
+                date_from: state.dateFrom || null,
+                date_to: state.dateTo || null,
             }),
         });
         state.results = data.results || [];
@@ -437,6 +452,8 @@ async function selectTable(table) {
     state.columns = [];
     state.results = [];
     state.filters = {};
+    state.dateFrom = '';
+    state.dateTo = '';
     elements.searchInput.value = '';
     elements.fuzzyToggle.checked = false;
     elements.tableName.textContent = table;
@@ -529,7 +546,7 @@ elements.connectionTabs.forEach((tab) => tab.addEventListener('click', () => set
 elements.tables.addEventListener('click', (event) => selectTable(event.target.closest('[data-table]')?.dataset.table));
 elements.tableFilter.addEventListener('input', renderTables);
 elements.databaseSelect.addEventListener('change', async () => {
-    Object.assign(state, { tables: [], activeTable: null, columns: [], results: [], query: '', fuzzy: false, filters: {} });
+    Object.assign(state, { tables: [], activeTable: null, columns: [], results: [], query: '', fuzzy: false, filters: {}, dateFrom: '', dateTo: '' });
     elements.searchInput.value = '';
     await openSavedDatabase(elements.databaseSelect.value);
 });
@@ -537,6 +554,14 @@ elements.searchForm.addEventListener('submit', (event) => { event.preventDefault
 elements.fuzzyToggle.addEventListener('change', searchTable);
 elements.refreshBtn.addEventListener('click', searchTable);
 elements.filters.addEventListener('change', (event) => {
+    const dateInput = event.target.closest('[data-date-bound]');
+    if (dateInput) {
+        if (dateInput.dataset.dateBound === 'from') state.dateFrom = dateInput.value;
+        if (dateInput.dataset.dateBound === 'to') state.dateTo = dateInput.value;
+        renderFilters();
+        searchTable();
+        return;
+    }
     const select = event.target.closest('[data-filter-column]');
     if (!select) return;
     if (select.value) state.filters[select.dataset.filterColumn] = [select.value];
@@ -544,7 +569,13 @@ elements.filters.addEventListener('change', (event) => {
     renderFilters();
     searchTable();
 });
-elements.clearFilters.addEventListener('click', () => { state.filters = {}; renderFilters(); searchTable(); });
+elements.clearFilters.addEventListener('click', () => {
+    state.filters = {};
+    state.dateFrom = '';
+    state.dateTo = '';
+    renderFilters();
+    searchTable();
+});
 elements.resultsTable.addEventListener('click', (event) => {
     const edit = event.target.closest('[data-edit-row]');
     const remove = event.target.closest('[data-delete-row]');
