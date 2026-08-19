@@ -23,6 +23,7 @@ const elements = {
     signedInPanel: $('#signed-in-panel'),
     connectionTabs: $$('[data-connection-tab]'),
     discordConnectionPanel: $('#discord-connection-panel'),
+    authError: $('#auth-error'),
     guestDatabaseForm: $('#guest-database-form'),
     guestDatabaseUrl: $('#guest-database-url'),
     guestConnectError: $('#guest-connect-error'),
@@ -188,6 +189,15 @@ function setConnectionMethod(method) {
         tab.tabIndex = selected ? 0 : -1;
     });
     if (showDatabase) requestAnimationFrame(() => elements.guestDatabaseUrl.focus());
+    refreshIcons();
+}
+
+function showCallbackError() {
+    const url = new URL(window.location.href);
+    if (url.searchParams.get('auth_error') !== 'discord_login') return;
+    elements.authError.hidden = false;
+    url.searchParams.delete('auth_error');
+    window.history.replaceState({}, '', `${url.pathname}${url.search}${url.hash}`);
     refreshIcons();
 }
 
@@ -553,6 +563,7 @@ document.addEventListener('keydown', (event) => {
 
 setTheme(localStorage.getItem('recallibrate-theme') || 'system');
 setConnectionMethod('discord');
+showCallbackError();
 refreshIcons();
 
 async function bootstrap() {

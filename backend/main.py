@@ -15,7 +15,7 @@ from fastapi.responses import FileResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 
-from auth import auth_store
+from auth import OAUTH_STATE_COOKIE, auth_store
 from runtime import RuntimeStore
 
 
@@ -203,9 +203,23 @@ async def discord_login():
 
 
 @app.get("/api/auth/discord/callback")
-async def discord_callback(request: Request, code: str, state: str):
+async def discord_callback(
+    request: Request,
+    code: Optional[str] = None,
+    state: Optional[str] = None,
+    error: Optional[str] = None,
+):
     require_local_mode()
-    return await auth_store.oauth_callback(request, code, state)
+    if error or not code or not state:
+        response = RedirectResponse("/?auth_error=discord_login", status_code=302)
+        response.delete_cookie(OAUTH_STATE_COOKIE)
+        return response
+    try:
+        return await auth_store.oauth_callback(request, code, state)
+    except HTTPException:
+        response = RedirectResponse("/?auth_error=discord_login", status_code=302)
+        response.delete_cookie(OAUTH_STATE_COOKIE)
+        return response
 
 
 @app.get("/api/auth/me")

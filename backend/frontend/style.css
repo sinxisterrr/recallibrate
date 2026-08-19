@@ -118,6 +118,8 @@ button { color: inherit; }
 .connection-tab.active { color: var(--ink); background: var(--surface-raised); box-shadow: 0 1px 4px rgba(0,0,0,.12); }
 .connection-tab svg { width: 16px; height: 16px; color: var(--signal); }
 .connection-tab:first-child svg { color: #5865f2; }
+.auth-error { margin: 10px 20px 0; padding: 10px 12px; display: flex; align-items: center; gap: 9px; border: 1px solid color-mix(in srgb, var(--danger) 38%, var(--line)); border-radius: 8px; background: color-mix(in srgb, var(--danger) 8%, transparent); color: var(--danger); font-size: 12px; line-height: 1.4; }
+.auth-error svg { width: 17px; height: 17px; flex: 0 0 auto; }
 .connection-panel { display: grid; gap: 16px; padding: 20px; border-top: 1px solid var(--line); }
 .connection-copy-small strong { display: block; font-size: 14px; }
 .connection-copy-small p { margin: 5px 0 0; color: var(--muted); font-size: 12px; line-height: 1.45; }

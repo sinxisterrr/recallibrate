@@ -8,6 +8,7 @@ from dataclasses import dataclass
 from datetime import datetime, timedelta, timezone
 import hashlib
 import json
+import logging
 import os
 from pathlib import Path
 import secrets
@@ -30,6 +31,7 @@ DISCORD_AUTHORIZE = "https://discord.com/oauth2/authorize"
 SESSION_COOKIE = "recallibrate_session"
 OAUTH_STATE_COOKIE = "recallibrate_oauth_state"
 SESSION_DAYS = 14
+logger = logging.getLogger(__name__)
 
 load_dotenv(Path(__file__).resolve().parent.parent / ".env")
 
@@ -251,6 +253,20 @@ class AuthStore:
             with urlopen(user_request, timeout=15) as response:
                 return json.load(response)
         except HTTPError as error:
+            discord_error = "unknown_error"
+            discord_description = ""
+            try:
+                payload = json.loads(error.read().decode("utf-8"))
+                discord_error = str(payload.get("error") or payload.get("code") or discord_error)
+                discord_description = str(payload.get("error_description") or payload.get("message") or "")
+            except (ValueError, UnicodeDecodeError):
+                pass
+            logger.warning(
+                "Discord OAuth request failed (status=%s, error=%s, description=%s)",
+                error.code,
+                discord_error,
+                discord_description,
+            )
             raise HTTPException(status_code=400, detail="Discord could not complete that login.") from error
         except URLError as error:
             raise HTTPException(status_code=502, detail="Discord could not be reached. Please try again.") from error
