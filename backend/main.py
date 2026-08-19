@@ -216,8 +216,13 @@ async def discord_callback(
         return response
     try:
         return await auth_store.oauth_callback(request, code, state)
-    except HTTPException:
-        response = RedirectResponse("/?auth_error=discord_login", status_code=302)
+    except HTTPException as exc:
+        error_code = {
+            403: "discord_not_invited",
+            502: "discord_unavailable",
+            503: "discord_not_configured",
+        }.get(exc.status_code, "discord_login")
+        response = RedirectResponse(f"/?auth_error={error_code}", status_code=302)
         response.delete_cookie(OAUTH_STATE_COOKIE)
         return response
 

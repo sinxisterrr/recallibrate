@@ -194,7 +194,15 @@ function setConnectionMethod(method) {
 
 function showCallbackError() {
     const url = new URL(window.location.href);
-    if (url.searchParams.get('auth_error') !== 'discord_login') return;
+    const errorCode = url.searchParams.get('auth_error');
+    const messages = {
+        discord_login: "Discord rejected the login exchange. Check Recallibrate's Discord client secret.",
+        discord_not_invited: 'This Discord account is not currently allowed to use Recallibrate.',
+        discord_unavailable: 'Discord could not be reached. Please try again in a moment.',
+        discord_not_configured: 'Discord login is not completely configured on this deployment.',
+    };
+    if (!messages[errorCode]) return;
+    elements.authError.querySelector('span').textContent = messages[errorCode];
     elements.authError.hidden = false;
     url.searchParams.delete('auth_error');
     window.history.replaceState({}, '', `${url.pathname}${url.search}${url.hash}`);
