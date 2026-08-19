@@ -24,6 +24,8 @@ For local HTTP development, use `RECALLIBRATE_SECURE_COOKIES=false`. Keep it `tr
 
 The generic database API is authenticated and never accepts a database URL on table, search, edit, or delete requests. With `RECALLIBRATE_ALLOW_SELF_SERVICE_DATABASES=true`, users without an assigned database can save an encrypted PostgreSQL URL through the connection screen. Assigned databases remain server-owned. Unapproved private or local network hosts are blocked; trusted private hosts must be listed in `RECALLIBRATE_ALLOWED_DB_HOSTS`.
 
+Users with a Sage deployment can instead enter its public HTTPS runtime URL. Recallibrate generates a short-lived code; the owner runs `/connect-recallibrate code:...` through that Sage bot. Sage then issues a dedicated, revocable Recallibrate token and keeps its PostgreSQL credentials inside the runtime boundary. The token cannot access Studio, conversation, model, or general memory-management APIs.
+
 Example assignment:
 
 ```env

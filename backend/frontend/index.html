@@ -58,6 +58,20 @@
                             <strong>Your private database</strong>
                         <p id="assignment-status">Checking your assigned database…</p>
                         </div>
+                        <form id="runtime-connect-form" class="database-connect-form" hidden>
+                            <label for="runtime-url">Recommended · Connect your Sage deployment</label>
+                            <div class="url-field">
+                                <i data-lucide="waypoints"></i>
+                                <input id="runtime-url" name="runtime-url" type="url" autocomplete="url" spellcheck="false" placeholder="https://your-sage-runtime.example.com" required>
+                            </div>
+                            <button type="submit" class="primary-btn"><i data-lucide="sparkles"></i><span>Pair with Sage</span></button>
+                        </form>
+                        <div id="runtime-pairing" class="runtime-pairing" hidden>
+                            <span>Run this private command through your Sage bot:</span>
+                            <code>/connect-recallibrate code:<strong id="runtime-code"></strong></code>
+                            <small id="runtime-pairing-status">Waiting for Sage…</small>
+                        </div>
+                        <div id="connection-divider" class="connection-divider" hidden><span>or connect PostgreSQL directly</span></div>
                         <form id="database-connect-form" class="database-connect-form" hidden>
                             <label for="database-url">PostgreSQL connection URL</label>
                             <div class="url-field">

@@ -16,6 +16,7 @@ from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 
 from auth import auth_store
+from runtime import RuntimeStore
 
 
 BASE_DIR = Path(__file__).resolve().parent
@@ -40,6 +41,7 @@ CAST_TYPES = {
 PORTFOLIO_TABLES = {"sam_lore", "projects", "opinions", "skills", "favorites"}
 
 PORTFOLIO_ONLY = os.getenv("RECALLIBRATE_PORTFOLIO_ONLY", "").lower() in {"1", "true", "yes"}
+runtime_store = RuntimeStore(auth_store.path, auth_store.cipher) if not PORTFOLIO_ONLY else None
 
 app = FastAPI(
     title="Recallibrate",
@@ -51,6 +53,16 @@ app = FastAPI(
 
 class ConnectRequest(BaseModel):
     db_url: str
+
+
+class RuntimeStartRequest(BaseModel):
+    endpoint: str
+
+
+class RuntimeClaimRequest(BaseModel):
+    action: str
+    code: str
+    token: str
 
 
 class DatabaseRequest(BaseModel):
@@ -144,6 +156,20 @@ def current_database_url(request: Request, database_id: Optional[str] = None) ->
     return auth_store.database_url_for(user, database_id)
 
 
+def current_runtime(request: Request, database_id: Optional[str]):
+    if database_id != "sage-runtime":
+        return None
+    user = auth_store.current_user(request)
+    connection = runtime_store.connection(user.discord_id) if runtime_store else None
+    if not connection:
+        raise HTTPException(status_code=409, detail="Connect a Sage runtime before opening it.")
+    return connection
+
+
+def request_payload(payload: BaseModel) -> dict:
+    return payload.model_dump(mode="json", exclude_none=True)
+
+
 async def database_label(db_url: str) -> str:
     parsed = urlparse(db_url)
     if parsed.scheme not in {"postgres", "postgresql"} or not parsed.hostname:
@@ -186,6 +212,12 @@ async def discord_callback(request: Request, code: str, state: str):
 async def auth_me(request: Request):
     require_local_mode()
     user = auth_store.current_user(request)
+    databases = auth_store.database_choices_for(user)
+    runtime_connection = runtime_store.connection(user.discord_id) if runtime_store else None
+    if runtime_connection:
+        databases.append({"id": "sage-runtime", "label": runtime_connection.label})
+    connected = bool(databases)
+    label = databases[0]["label"] if databases else user.database_label
     return {
         "user": {
             "discord_id": user.discord_id,
@@ -193,8 +225,8 @@ async def auth_me(request: Request):
             "display_name": user.display_name,
             "avatar_url": user.avatar_url,
         },
-        "database": {"connected": user.has_database, "label": user.database_label},
-        "databases": auth_store.database_choices_for(user),
+        "database": {"connected": connected, "label": label},
+        "databases": databases,
     }
 
 
@@ -202,6 +234,41 @@ async def auth_me(request: Request):
 async def logout(request: Request):
     require_local_mode()
     return auth_store.logout(request)
+
+
+@app.post("/api/runtime/pair/start")
+async def start_runtime_pairing(request: Request, payload: RuntimeStartRequest):
+    require_local_mode()
+    user = auth_store.current_user(request)
+    if not runtime_store:
+        raise HTTPException(status_code=503, detail="Runtime pairing is unavailable.")
+    return await runtime_store.start(user.discord_id, payload.endpoint)
+
+
+@app.get("/api/runtime/pair/status")
+async def runtime_pairing_status(request: Request, id: str):
+    require_local_mode()
+    user = auth_store.current_user(request)
+    if not runtime_store:
+        raise HTTPException(status_code=503, detail="Runtime pairing is unavailable.")
+    return runtime_store.status(user.discord_id, id)
+
+
+@app.post("/api/runtime/pair")
+async def claim_runtime_pairing(payload: RuntimeClaimRequest):
+    require_local_mode()
+    if payload.action != "claim" or not runtime_store:
+        raise HTTPException(status_code=400, detail="That runtime pairing action is invalid.")
+    return await runtime_store.claim(payload.code, payload.token)
+
+
+@app.delete("/api/account/runtime")
+async def disconnect_runtime(request: Request):
+    require_local_mode()
+    user = auth_store.current_user(request)
+    if runtime_store:
+        runtime_store.disconnect(user.discord_id)
+    return {"success": True}
 
 
 @app.put("/api/account/database")
@@ -239,6 +306,9 @@ async def clear_database_connection(request: Request):
 @app.post("/api/database/tables")
 async def list_tables(request: Request, payload: DatabaseRequest):
     require_local_mode()
+    runtime = current_runtime(request, payload.database_id)
+    if runtime:
+        return await runtime_store.proxy(runtime, "/v1/recallibrate/tables", "POST", {})
     conn = await connect_database(current_database_url(request, payload.database_id))
     try:
         rows = await conn.fetch(
@@ -257,6 +327,9 @@ async def list_tables(request: Request, payload: DatabaseRequest):
 @app.post("/api/database/columns")
 async def list_columns(request: Request, payload: TableRequest):
     require_local_mode()
+    runtime = current_runtime(request, payload.database_id)
+    if runtime:
+        return await runtime_store.proxy(runtime, "/v1/recallibrate/columns", "POST", request_payload(payload))
     conn = await connect_database(current_database_url(request, payload.database_id))
     try:
         columns = await table_schema(conn, payload.table_name)
@@ -302,6 +375,9 @@ async def list_columns(request: Request, payload: TableRequest):
 @app.post("/api/database/search")
 async def search_entries(request: Request, payload: SearchRequest):
     require_local_mode()
+    runtime = current_runtime(request, payload.database_id)
+    if runtime:
+        return await runtime_store.proxy(runtime, "/v1/recallibrate/search", "POST", request_payload(payload))
     conn = await connect_database(current_database_url(request, payload.database_id))
     try:
         columns = await table_schema(conn, payload.table_name)
@@ -440,6 +516,9 @@ async def portfolio_search(payload: PortfolioSearchRequest):
 @app.put("/api/database/record")
 async def update_entry(request: Request, payload: UpdateEntryRequest):
     require_local_mode()
+    runtime = current_runtime(request, payload.database_id)
+    if runtime:
+        return await runtime_store.proxy(runtime, "/v1/recallibrate/record", "PUT", request_payload(payload))
     conn = await connect_database(current_database_url(request, payload.database_id))
     try:
         columns = await table_schema(conn, payload.table_name)
@@ -478,6 +557,9 @@ async def update_entry(request: Request, payload: UpdateEntryRequest):
 @app.delete("/api/database/record")
 async def delete_entry(request: Request, payload: DeleteEntryRequest):
     require_local_mode()
+    runtime = current_runtime(request, payload.database_id)
+    if runtime:
+        return await runtime_store.proxy(runtime, "/v1/recallibrate/record", "DELETE", request_payload(payload))
     conn = await connect_database(current_database_url(request, payload.database_id))
     try:
         columns = await table_schema(conn, payload.table_name)

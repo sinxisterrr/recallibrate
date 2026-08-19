@@ -29,6 +29,12 @@ const elements = {
     assignmentStatus: $('#assignment-status'),
     databaseConnectForm: $('#database-connect-form'),
     databaseUrl: $('#database-url'),
+    runtimeConnectForm: $('#runtime-connect-form'),
+    runtimeUrl: $('#runtime-url'),
+    runtimePairing: $('#runtime-pairing'),
+    runtimeCode: $('#runtime-code'),
+    runtimePairingStatus: $('#runtime-pairing-status'),
+    connectionDivider: $('#connection-divider'),
     databaseSelect: $('#database-select'),
     tableFilter: $('#table-filter'),
     tables: $('#tables'),
@@ -161,6 +167,8 @@ function renderAccount(user, database = {}) {
         ? `${database.label || 'Your database'} is ready.`
         : 'No database is connected yet. Paste its PostgreSQL URL below.';
     elements.databaseConnectForm.hidden = database.connected;
+    elements.runtimeConnectForm.hidden = database.connected;
+    elements.connectionDivider.hidden = database.connected;
     refreshIcons();
 }
 
@@ -193,6 +201,46 @@ async function connectDatabase(event) {
     } finally {
         button.disabled = false;
     }
+}
+
+async function connectRuntime(event) {
+    event.preventDefault();
+    const button = elements.runtimeConnectForm.querySelector('button[type="submit"]');
+    button.disabled = true;
+    elements.connectError.textContent = '';
+    try {
+        const pairing = await api('/api/runtime/pair/start', {
+            method: 'POST',
+            body: JSON.stringify({ endpoint: elements.runtimeUrl.value.trim() }),
+        });
+        elements.runtimeCode.textContent = pairing.code;
+        elements.runtimePairing.hidden = false;
+        elements.runtimePairingStatus.textContent = 'Waiting for Sage…';
+        refreshIcons();
+        await waitForRuntimePairing(pairing.id);
+    } catch (error) {
+        elements.connectError.textContent = friendlyError(error);
+    } finally {
+        button.disabled = false;
+    }
+}
+
+async function waitForRuntimePairing(pairingId) {
+    const deadline = Date.now() + 10 * 60 * 1000;
+    while (Date.now() < deadline) {
+        await new Promise((resolve) => setTimeout(resolve, 2000));
+        const pairing = await api(`/api/runtime/pair/status?id=${encodeURIComponent(pairingId)}`);
+        if (pairing.status === 'connected') {
+            elements.runtimePairingStatus.textContent = 'Connected securely.';
+            await bootstrap();
+            return;
+        }
+        if (pairing.status === 'failed') {
+            throw new Error(pairing.error || 'Sage could not complete the pairing.');
+        }
+        elements.runtimePairingStatus.textContent = pairing.status === 'claiming' ? 'Verifying Sage and its database…' : 'Waiting for Sage…';
+    }
+    throw new Error('That pairing code expired. Generate a new one and try again.');
 }
 
 async function openSavedDatabase(databaseId = state.activeDatabaseId) {
@@ -452,6 +500,7 @@ elements.deleteDialog.addEventListener('close', () => {
 });
 elements.logoutBtn.addEventListener('click', logout);
 elements.databaseConnectForm.addEventListener('submit', connectDatabase);
+elements.runtimeConnectForm.addEventListener('submit', connectRuntime);
 $('#disconnect-btn').addEventListener('click', logout);
 $('#home-btn').addEventListener('click', () => window.location.assign('/'));
 

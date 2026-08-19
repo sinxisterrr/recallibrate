@@ -66,6 +66,13 @@ button, input, select, textarea { font: inherit; }
 .database-connect-form { display: grid; gap: 10px; margin-top: 18px; width: 100%; }
 .database-connect-form[hidden] { display: none; }
 .database-connect-form > label { color: var(--muted); font-size: 11px; font-weight: 600; letter-spacing: .08em; text-transform: uppercase; }
+.runtime-pairing { display: grid; gap: 8px; width: 100%; padding: 14px; border: 1px solid color-mix(in srgb, var(--signal) 45%, var(--line)); border-radius: 9px; background: color-mix(in srgb, var(--signal) 8%, transparent); }
+.runtime-pairing[hidden] { display: none; }
+.runtime-pairing span, .runtime-pairing small { color: var(--muted); font-size: 12px; }
+.runtime-pairing code { overflow-wrap: anywhere; color: var(--ink); font: 12px var(--mono); }
+.connection-divider { display: flex; align-items: center; gap: 10px; width: 100%; color: var(--faint); font-size: 10px; letter-spacing: .07em; text-transform: uppercase; }
+.connection-divider::before, .connection-divider::after { content: ""; flex: 1; height: 1px; background: var(--line); }
+.connection-divider[hidden] { display: none; }
 button { color: inherit; }
 [hidden] { display: none !important; }
 
