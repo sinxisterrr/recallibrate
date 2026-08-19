@@ -46,6 +46,23 @@
                     </a>
                 </div>
 
+                <div id="guest-divider" class="connection-divider"><span>or use a database URL without Discord</span></div>
+                <form id="guest-database-form" class="auth-card guest-database-card">
+                    <div class="auth-mark"><i data-lucide="database-zap"></i></div>
+                    <div>
+                        <strong>Connect PostgreSQL directly</strong>
+                        <p>Your credential is encrypted into this browser session and removed when you disconnect.</p>
+                    </div>
+                    <div class="guest-database-controls">
+                        <div class="url-field">
+                            <i data-lucide="link"></i>
+                            <input id="guest-database-url" type="password" autocomplete="off" spellcheck="false" placeholder="postgresql://user:password@host:5432/database" required>
+                        </div>
+                        <button type="submit" class="primary-btn"><i data-lucide="plug-zap"></i><span>Open database</span></button>
+                    </div>
+                    <div id="guest-connect-error" class="inline-error" role="alert" aria-live="polite"></div>
+                </form>
+
                 <div id="signed-in-panel" hidden>
                     <div class="account-strip">
                         <div id="account-avatar" class="account-avatar"><i data-lucide="user"></i></div>

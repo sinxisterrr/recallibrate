@@ -224,6 +224,7 @@ async def auth_me(request: Request):
             "username": user.username,
             "display_name": user.display_name,
             "avatar_url": user.avatar_url,
+            "is_guest": user.is_guest,
         },
         "database": {"connected": connected, "label": label},
         "databases": databases,
@@ -236,10 +237,23 @@ async def logout(request: Request):
     return auth_store.logout(request)
 
 
+@app.post("/api/auth/database")
+async def direct_database_login(payload: ConnectRequest):
+    require_local_mode()
+    require_self_service_databases()
+    db_url = payload.db_url.strip()
+    label = await database_label(db_url)
+    conn = await connect_database(db_url)
+    await conn.close()
+    return auth_store.create_guest_database_session(db_url, label)
+
+
 @app.post("/api/runtime/pair/start")
 async def start_runtime_pairing(request: Request, payload: RuntimeStartRequest):
     require_local_mode()
     user = auth_store.current_user(request)
+    if user.is_guest:
+        raise HTTPException(status_code=403, detail="Sign in with Discord to pair a Sage runtime.")
     if not runtime_store:
         raise HTTPException(status_code=503, detail="Runtime pairing is unavailable.")
     return await runtime_store.start(user.discord_id, payload.endpoint)

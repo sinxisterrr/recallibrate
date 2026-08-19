@@ -20,7 +20,7 @@ from urllib.request import Request as UrlRequest, urlopen
 from cryptography.fernet import Fernet, InvalidToken
 from dotenv import load_dotenv
 from fastapi import HTTPException, Request
-from fastapi.responses import RedirectResponse
+from fastapi.responses import JSONResponse, RedirectResponse
 
 from assignments import database_assignments
 
@@ -61,6 +61,7 @@ class DiscordUser:
     avatar_url: Optional[str]
     has_database: bool
     database_label: Optional[str]
+    is_guest: bool = False
 
 
 class AuthStore:
@@ -121,6 +122,9 @@ class AuthStore:
                 CREATE INDEX IF NOT EXISTS sessions_expires_at_idx ON sessions(expires_at);
                 """
             )
+            columns = {row["name"] for row in conn.execute("PRAGMA table_info(users)").fetchall()}
+            if "is_guest" not in columns:
+                conn.execute("ALTER TABLE users ADD COLUMN is_guest INTEGER NOT NULL DEFAULT 0")
 
     def require_oauth_configuration(self) -> None:
         missing = [
@@ -200,6 +204,8 @@ class AuthStore:
         session_token = secrets.token_urlsafe(48)
         expires_at = (_utcnow() + timedelta(days=SESSION_DAYS)).isoformat()
         with self._connect() as conn:
+            conn.execute("DELETE FROM sessions WHERE expires_at <= ?", (now,))
+            conn.execute("DELETE FROM users WHERE is_guest=1 AND discord_id NOT IN (SELECT discord_id FROM sessions)")
             conn.execute(
                 "INSERT INTO sessions (token_hash, discord_id, created_at, expires_at) VALUES (?, ?, ?, ?)",
                 (_token_hash(session_token), discord_id, now, expires_at),
@@ -257,7 +263,7 @@ class AuthStore:
         with self._connect() as conn:
             row = conn.execute(
                 """
-                SELECT u.discord_id, u.username, u.display_name, u.avatar_hash,
+                SELECT u.discord_id, u.username, u.display_name, u.avatar_hash, u.is_guest,
                        u.encrypted_database_url IS NOT NULL AS has_database, u.database_label
                 FROM sessions s
                 JOIN users u ON u.discord_id = s.discord_id
@@ -267,7 +273,7 @@ class AuthStore:
             ).fetchone()
         if not row:
             raise HTTPException(status_code=401, detail="Your Recallibrate session has expired.")
-        if not self.discord_user_allowed(row["discord_id"]):
+        if not row["is_guest"] and not self.discord_user_allowed(row["discord_id"]):
             raise HTTPException(status_code=403, detail="This Discord account is no longer invited to Recallibrate.")
         avatar_url = None
         if row["avatar_hash"]:
@@ -280,6 +286,7 @@ class AuthStore:
             avatar_url=avatar_url,
             has_database=bool(assignments or row["has_database"]),
             database_label=(assignments[0].label if len(assignments) == 1 else f"{len(assignments)} assigned databases") if assignments else row["database_label"],
+            is_guest=bool(row["is_guest"]),
         )
 
     def discord_user_allowed(self, discord_id: str) -> bool:
@@ -326,6 +333,36 @@ class AuthStore:
                 (encrypted, label, _utcnow().isoformat(), user.discord_id),
             )
 
+    def create_guest_database_session(self, database_url: str, label: str) -> JSONResponse:
+        cipher = self.require_cipher()
+        guest_id = f"guest:{secrets.token_urlsafe(24)}"
+        now = _utcnow().isoformat()
+        encrypted = cipher.encrypt(database_url.encode("utf-8"))
+        session_token = secrets.token_urlsafe(48)
+        expires_at = (_utcnow() + timedelta(days=SESSION_DAYS)).isoformat()
+        with self._connect() as conn:
+            conn.execute("DELETE FROM sessions WHERE expires_at <= ?", (now,))
+            conn.execute("DELETE FROM users WHERE is_guest=1 AND discord_id NOT IN (SELECT discord_id FROM sessions)")
+            conn.execute(
+                """
+                INSERT INTO users (
+                    discord_id,username,display_name,avatar_hash,encrypted_database_url,
+                    database_label,created_at,updated_at,last_login_at,is_guest
+                ) VALUES (?,?,?,?,?,?,?,?,?,1)
+                """,
+                (guest_id, "database-user", "Direct database", None, encrypted, label, now, now, now),
+            )
+            conn.execute(
+                "INSERT INTO sessions (token_hash,discord_id,created_at,expires_at) VALUES (?,?,?,?)",
+                (_token_hash(session_token), guest_id, now, expires_at),
+            )
+        response = JSONResponse({"success": True, "database": {"label": label}})
+        response.set_cookie(
+            SESSION_COOKIE, session_token, max_age=SESSION_DAYS * 86400,
+            httponly=True, secure=self.secure_cookies, samesite="lax",
+        )
+        return response
+
     def clear_database_url(self, user: DiscordUser) -> None:
         with self._connect() as conn:
             conn.execute(
@@ -337,7 +374,13 @@ class AuthStore:
         token = request.cookies.get(SESSION_COOKIE)
         if token:
             with self._connect() as conn:
+                row = conn.execute(
+                    "SELECT discord_id FROM sessions WHERE token_hash=?",
+                    (_token_hash(token),),
+                ).fetchone()
                 conn.execute("DELETE FROM sessions WHERE token_hash = ?", (_token_hash(token),))
+                if row and str(row["discord_id"]).startswith("guest:"):
+                    conn.execute("DELETE FROM users WHERE discord_id=?", (row["discord_id"],))
         response = RedirectResponse("/", status_code=303)
         response.delete_cookie(SESSION_COOKIE)
         return response

@@ -26,6 +26,8 @@ The generic database API is authenticated and never accepts a database URL on ta
 
 Users with a Sage deployment can instead enter its public HTTPS runtime URL. Recallibrate generates a short-lived code; the owner runs `/connect-recallibrate code:...` through that Sage bot. Sage then issues a dedicated, revocable Recallibrate token and keeps its PostgreSQL credentials inside the runtime boundary. The token cannot access Studio, conversation, model, or general memory-management APIs.
 
+Discord is optional for standalone PostgreSQL users. The public landing screen can validate a PostgreSQL URL and create an isolated encrypted guest session without a Discord account. The credential remains server-side, is scoped to its random session cookie, and is deleted when the user disconnects. Public database hosts are accepted after DNS safety checks; private network destinations still require an explicit server allowlist entry.
+
 Example assignment:
 
 ```env

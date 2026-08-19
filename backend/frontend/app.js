@@ -21,6 +21,10 @@ const elements = {
     workspaceView: $('#workspace-view'),
     signedOutPanel: $('#signed-out-panel'),
     signedInPanel: $('#signed-in-panel'),
+    guestDivider: $('#guest-divider'),
+    guestDatabaseForm: $('#guest-database-form'),
+    guestDatabaseUrl: $('#guest-database-url'),
+    guestConnectError: $('#guest-connect-error'),
     accountAvatar: $('#account-avatar'),
     accountName: $('#account-name'),
     accountId: $('#account-id'),
@@ -155,8 +159,10 @@ function renderAccount(user, database = {}) {
     state.databaseLabel = database.label || null;
     elements.signedOutPanel.hidden = true;
     elements.signedInPanel.hidden = false;
+    elements.guestDivider.hidden = true;
+    elements.guestDatabaseForm.hidden = true;
     elements.accountName.textContent = user.display_name || user.username;
-    elements.accountId.textContent = `Discord ${user.discord_id}`;
+    elements.accountId.textContent = user.is_guest ? 'Standalone encrypted session' : `Discord ${user.discord_id}`;
     elements.accountAvatar.innerHTML = user.avatar_url
         ? `<img src="${escapeHtml(user.avatar_url)}" alt="">`
         : icon('user');
@@ -198,6 +204,25 @@ async function connectDatabase(event) {
         await bootstrap();
     } catch (error) {
         elements.connectError.textContent = friendlyError(error);
+    } finally {
+        button.disabled = false;
+    }
+}
+
+async function connectGuestDatabase(event) {
+    event.preventDefault();
+    const button = elements.guestDatabaseForm.querySelector('button[type="submit"]');
+    button.disabled = true;
+    elements.guestConnectError.textContent = '';
+    try {
+        await api('/api/auth/database', {
+            method: 'POST',
+            body: JSON.stringify({ db_url: elements.guestDatabaseUrl.value.trim() }),
+        });
+        elements.guestDatabaseUrl.value = '';
+        await bootstrap();
+    } catch (error) {
+        elements.guestConnectError.textContent = friendlyError(error);
     } finally {
         button.disabled = false;
     }
@@ -500,6 +525,7 @@ elements.deleteDialog.addEventListener('close', () => {
 });
 elements.logoutBtn.addEventListener('click', logout);
 elements.databaseConnectForm.addEventListener('submit', connectDatabase);
+elements.guestDatabaseForm.addEventListener('submit', connectGuestDatabase);
 elements.runtimeConnectForm.addEventListener('submit', connectRuntime);
 $('#disconnect-btn').addEventListener('click', logout);
 $('#home-btn').addEventListener('click', () => window.location.assign('/'));
@@ -526,6 +552,8 @@ async function bootstrap() {
         if (error.status === 401) {
             elements.signedOutPanel.hidden = false;
             elements.signedInPanel.hidden = true;
+            elements.guestDivider.hidden = false;
+            elements.guestDatabaseForm.hidden = false;
             return;
         }
         elements.signedOutPanel.hidden = true;

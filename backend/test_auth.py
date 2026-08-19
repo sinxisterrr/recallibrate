@@ -1,8 +1,15 @@
 import os
+from http.cookies import SimpleCookie
+import sqlite3
+import tempfile
 import unittest
 from unittest.mock import patch
 
+from cryptography.fernet import Fernet
+from starlette.requests import Request
+
 from assignments import AssignedDatabase, database_assignments
+from auth import AuthStore
 
 
 class DatabaseAssignmentTests(unittest.TestCase):
@@ -63,6 +70,44 @@ class DatabaseAssignmentTests(unittest.TestCase):
     def test_empty_assignment_configuration_is_deny_by_default(self):
         with patch.dict(os.environ, {"RECALLIBRATE_DATABASE_ASSIGNMENTS": ""}, clear=False):
             self.assertEqual(database_assignments(), {})
+
+
+class GuestDatabaseSessionTests(unittest.TestCase):
+    def test_guest_database_session_is_encrypted_and_removed_on_logout(self):
+        handle = tempfile.NamedTemporaryFile(delete=False)
+        handle.close()
+        key = Fernet.generate_key().decode("ascii")
+        try:
+            with patch.dict(os.environ, {
+                "RECALLIBRATE_STATE_PATH": handle.name,
+                "RECALLIBRATE_CREDENTIAL_KEY": key,
+                "RECALLIBRATE_PORTFOLIO_ONLY": "false",
+                "RECALLIBRATE_SECURE_COOKIES": "false",
+            }, clear=False):
+                store = AuthStore()
+            raw_url = "postgresql://owner:very-secret@db.example.com/postgres"
+            response = store.create_guest_database_session(raw_url, "db.example.com/postgres")
+            cookie = SimpleCookie(); cookie.load(response.headers["set-cookie"])
+            token = cookie["recallibrate_session"].value
+            request = Request({"type": "http", "headers": [(b"cookie", f"recallibrate_session={token}".encode())]})
+            user = store.current_user(request)
+            self.assertTrue(user.is_guest)
+            conn = sqlite3.connect(handle.name)
+            try:
+                row = conn.execute("SELECT encrypted_database_url FROM users WHERE discord_id=?", (user.discord_id,)).fetchone()
+                self.assertIsNotNone(row)
+                self.assertNotIn(b"very-secret", row[0])
+            finally:
+                conn.close()
+            store.logout(request)
+            conn = sqlite3.connect(handle.name)
+            try:
+                remaining = conn.execute("SELECT COUNT(*) FROM users WHERE discord_id=?", (user.discord_id,)).fetchone()[0]
+                self.assertEqual(remaining, 0)
+            finally:
+                conn.close()
+        finally:
+            os.unlink(handle.name)
 
 
 if __name__ == "__main__":

@@ -73,6 +73,10 @@ button, input, select, textarea { font: inherit; }
 .connection-divider { display: flex; align-items: center; gap: 10px; width: 100%; color: var(--faint); font-size: 10px; letter-spacing: .07em; text-transform: uppercase; }
 .connection-divider::before, .connection-divider::after { content: ""; flex: 1; height: 1px; background: var(--line); }
 .connection-divider[hidden] { display: none; }
+.guest-database-card { grid-template-columns: auto 1fr; }
+.guest-database-controls { grid-column: 1 / -1; display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 10px; width: 100%; }
+.guest-database-card .inline-error { grid-column: 1 / -1; }
+@media (max-width: 680px) { .guest-database-controls { grid-template-columns: 1fr; } }
 button { color: inherit; }
 [hidden] { display: none !important; }
 
