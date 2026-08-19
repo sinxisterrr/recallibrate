@@ -63,9 +63,9 @@ body { margin: 0; min-height: 100vh; color: var(--ink); background: var(--paper)
 button, input, select, textarea { font: inherit; }
 .discord-mark svg { width: 31px; height: 24px; }
 .discord-btn svg { width: 22px; height: 17px; flex: 0 0 auto; }
-.database-connect-form { display: grid; gap: 10px; margin-top: 18px; width: 100%; }
+.database-connect-form { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 10px; margin-top: 18px; width: 100%; }
 .database-connect-form[hidden] { display: none; }
-.database-connect-form > label { color: var(--muted); font-size: 11px; font-weight: 600; letter-spacing: .08em; text-transform: uppercase; }
+.database-connect-form > label { grid-column: 1 / -1; color: var(--muted); font-size: 11px; font-weight: 600; letter-spacing: .08em; text-transform: uppercase; }
 .runtime-pairing { display: grid; gap: 8px; width: 100%; padding: 14px; border: 1px solid color-mix(in srgb, var(--signal) 45%, var(--line)); border-radius: 9px; background: color-mix(in srgb, var(--signal) 8%, transparent); }
 .runtime-pairing[hidden] { display: none; }
 .runtime-pairing span, .runtime-pairing small { color: var(--muted); font-size: 12px; }
@@ -74,7 +74,10 @@ button, input, select, textarea { font: inherit; }
 .connection-divider::before, .connection-divider::after { content: ""; flex: 1; height: 1px; background: var(--line); }
 .connection-divider[hidden] { display: none; }
 .guest-database-controls { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 10px; width: 100%; }
-@media (max-width: 680px) { .guest-database-controls { grid-template-columns: 1fr; } }
+@media (max-width: 680px) {
+    .guest-database-controls, .database-connect-form { grid-template-columns: 1fr; }
+    .database-connect-form .primary-btn { width: 100%; }
+}
 button { color: inherit; }
 [hidden] { display: none !important; }
 
@@ -134,7 +137,17 @@ button { color: inherit; }
 .account-strip strong { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 12px; }
 .account-strip .text-btn { margin-left: auto; }
 
-.connection-card { display: grid; grid-template-columns: 1fr auto; gap: 10px; background: var(--surface-raised); border: 1px solid var(--line-strong); border-radius: var(--radius); padding: 18px; box-shadow: 5px 5px 0 var(--paper-deep); }
+.connection-card { display: grid; grid-template-columns: auto minmax(0, 1fr); column-gap: 14px; row-gap: 0; align-items: center; background: var(--surface-raised); border: 1px solid var(--line-strong); border-radius: var(--radius); padding: 20px; box-shadow: 5px 5px 0 var(--paper-deep); }
+.connection-card-heading { min-width: 0; }
+.connection-card-heading strong { display: block; font-size: 14px; }
+.connection-card-heading p { margin: 5px 0 0; color: var(--muted); font-size: 12px; line-height: 1.45; }
+.connection-card > .database-connect-form,
+.connection-card > .runtime-pairing,
+.connection-card > .connection-divider,
+.connection-card > .privacy-note,
+.connection-card > .inline-error { grid-column: 1 / -1; }
+.connection-card > .connection-divider { margin-top: 18px; }
+.connection-card > .privacy-note { margin-top: 16px; }
 .connection-card > label { grid-column: 1 / -1; display: block; font-size: 13px; font-weight: 600; }
 .url-field { position: relative; display: flex; align-items: center; border: 1px solid var(--line); background: var(--paper); border-radius: 9px; transition: border .2s, box-shadow .2s; }
 .url-field:focus-within { border-color: var(--signal); box-shadow: 0 0 0 3px var(--signal-soft); }
@@ -306,7 +319,7 @@ kbd { border: 1px solid var(--line); border-radius: 4px; color: var(--faint); pa
     .connect-view { min-height: 100svh; height: auto; overflow: visible; }
     .connect-main { padding: 35px 18px; }
     .connect-copy h1 { font-size: clamp(39px, 13vw, 56px); }
-    .connection-card { grid-template-columns: 1fr; }
+    .connection-card { grid-template-columns: auto minmax(0, 1fr); }
     .primary-btn { width: 100%; }
     .workspace-view { height: 100svh; display: flex; flex-direction: column; }
     .sidebar { width: 100%; height: auto; flex: 0 0 auto; max-height: 220px; border-right: 0; border-bottom: 1px solid var(--line); }
