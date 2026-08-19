@@ -88,6 +88,23 @@ button { color: inherit; }
 .connect-copy h1 em { font-family: var(--mono); font-weight: 400; color: var(--signal); }
 .connect-copy > p { margin: 0 0 28px; color: var(--muted); font-size: 17px; line-height: 1.5; }
 
+.auth-card { display: grid; grid-template-columns: auto 1fr; gap: 13px 14px; align-items: center; padding: 20px; border: 1px solid var(--line-strong); border-radius: var(--radius); background: var(--surface-raised); box-shadow: 5px 5px 0 var(--paper-deep); }
+.auth-mark { width: 42px; height: 42px; display: grid; place-items: center; border-radius: 10px; color: #fff; background: #5865f2; }
+.auth-mark svg { width: 20px; }
+.auth-card strong { display: block; font-size: 14px; }
+.auth-card p { margin: 5px 0 0; color: var(--muted); font-size: 12px; line-height: 1.45; }
+.discord-btn { grid-column: 1 / -1; min-height: 48px; display: flex; align-items: center; justify-content: center; gap: 9px; border-radius: 8px; color: #fff; background: #5865f2; text-decoration: none; font-weight: 600; transition: transform .15s, background .15s; }
+.discord-btn:hover { transform: translateY(-1px); background: #4752c4; }
+.discord-btn svg { width: 16px; }
+.account-strip { min-height: 62px; margin-bottom: 12px; padding: 9px 12px; display: flex; align-items: center; gap: 11px; border: 1px solid var(--line); border-radius: 10px; background: var(--surface); }
+.account-avatar { width: 40px; height: 40px; flex: 0 0 auto; display: grid; place-items: center; border-radius: 50%; overflow: hidden; background: var(--signal-soft); color: var(--signal); }
+.account-avatar img { width: 100%; height: 100%; object-fit: cover; }
+.account-avatar svg { width: 18px; }
+.account-strip > div:nth-child(2) { min-width: 0; display: grid; }
+.account-strip span, .account-strip small { color: var(--faint); font: 8px var(--mono); }
+.account-strip strong { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 12px; }
+.account-strip .text-btn { margin-left: auto; }
+
 .connection-card { display: grid; grid-template-columns: 1fr auto; gap: 10px; background: var(--surface-raised); border: 1px solid var(--line-strong); border-radius: var(--radius); padding: 18px; box-shadow: 5px 5px 0 var(--paper-deep); }
 .connection-card > label { grid-column: 1 / -1; display: block; font-size: 13px; font-weight: 600; }
 .url-field { position: relative; display: flex; align-items: center; border: 1px solid var(--line); background: var(--paper); border-radius: 9px; transition: border .2s, box-shadow .2s; }
@@ -120,6 +137,8 @@ button { color: inherit; }
 .sidebar-search:focus-within { border-color: var(--line-strong); }
 .sidebar-search svg { width: 15px; color: var(--muted); }
 .sidebar-search input { flex: 1; min-width: 0; background: transparent; border: 0; outline: 0; color: var(--ink); font-size: 12px; }
+.sidebar-search select { flex: 1; min-width: 0; background: transparent; border: 0; outline: 0; color: var(--ink); font: 12px var(--mono); }
+.sidebar-search select option { background: var(--surface-raised); color: var(--ink); }
 kbd { border: 1px solid var(--line); border-radius: 4px; color: var(--faint); padding: 2px 5px; background: var(--paper); font: 9px var(--mono); }
 .table-list { flex: 1; overflow-y: auto; padding: 0 8px 20px; }
 .tables-btn { width: 100%; min-height: 42px; padding: 0 11px; display: flex; align-items: center; gap: 10px; border: 0; border-radius: 7px; background: transparent; color: var(--muted); text-align: left; cursor: pointer; font: 12px var(--mono); }

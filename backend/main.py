@@ -4,12 +4,15 @@ from datetime import date
 import os
 from pathlib import Path
 from typing import Optional
+from urllib.parse import urlparse
 
 import asyncpg
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Request
 from fastapi.responses import FileResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
+
+from auth import auth_store
 
 
 BASE_DIR = Path(__file__).resolve().parent
@@ -47,7 +50,11 @@ class ConnectRequest(BaseModel):
     db_url: str
 
 
-class TableRequest(ConnectRequest):
+class DatabaseRequest(BaseModel):
+    database_id: Optional[str] = None
+
+
+class TableRequest(DatabaseRequest):
     table_name: str
 
 
@@ -124,10 +131,102 @@ def require_local_mode() -> None:
         raise HTTPException(status_code=404, detail="Not found.")
 
 
-@app.post("/api/database/tables")
-async def list_tables(payload: ConnectRequest):
+def require_self_service_databases() -> None:
+    if not auth_store.allow_self_service_databases:
+        raise HTTPException(status_code=404, detail="Not found.")
+
+
+def current_database_url(request: Request, database_id: Optional[str] = None) -> str:
+    user = auth_store.current_user(request)
+    return auth_store.database_url_for(user, database_id)
+
+
+def database_label(db_url: str) -> str:
+    parsed = urlparse(db_url)
+    if parsed.scheme not in {"postgres", "postgresql"} or not parsed.hostname:
+        raise HTTPException(status_code=400, detail="Enter a valid PostgreSQL connection URL.")
+    if not auth_store.allowed_database_hosts:
+        raise HTTPException(status_code=503, detail="RECALLIBRATE_ALLOWED_DB_HOSTS is not configured.")
+    if parsed.hostname.lower() not in auth_store.allowed_database_hosts:
+        raise HTTPException(status_code=403, detail="That database host is not approved for Recallibrate.")
+    database_name = parsed.path.lstrip("/") or "postgres"
+    try:
+        port = f":{parsed.port}" if parsed.port else ""
+    except ValueError as error:
+        raise HTTPException(status_code=400, detail="That PostgreSQL URL has an invalid port.") from error
+    return f"{parsed.hostname}{port}/{database_name}"
+
+
+@app.get("/api/auth/discord/start")
+async def discord_login():
     require_local_mode()
-    conn = await connect_database(payload.db_url)
+    return auth_store.oauth_start()
+
+
+@app.get("/api/auth/discord/callback")
+async def discord_callback(request: Request, code: str, state: str):
+    require_local_mode()
+    return await auth_store.oauth_callback(request, code, state)
+
+
+@app.get("/api/auth/me")
+async def auth_me(request: Request):
+    require_local_mode()
+    user = auth_store.current_user(request)
+    return {
+        "user": {
+            "discord_id": user.discord_id,
+            "username": user.username,
+            "display_name": user.display_name,
+            "avatar_url": user.avatar_url,
+        },
+        "database": {"connected": user.has_database, "label": user.database_label},
+        "databases": auth_store.database_choices_for(user),
+    }
+
+
+@app.post("/api/auth/logout")
+async def logout(request: Request):
+    require_local_mode()
+    return auth_store.logout(request)
+
+
+@app.put("/api/account/database")
+async def save_database_connection(request: Request, payload: ConnectRequest):
+    require_local_mode()
+    require_self_service_databases()
+    user = auth_store.current_user(request)
+    db_url = payload.db_url.strip()
+    label = database_label(db_url)
+    conn = await connect_database(db_url)
+    try:
+        rows = await conn.fetch(
+            """
+            SELECT table_name
+            FROM information_schema.tables
+            WHERE table_schema = 'public' AND table_type = 'BASE TABLE'
+            ORDER BY table_name
+            """
+        )
+    finally:
+        await conn.close()
+    auth_store.save_database_url(user, db_url, label)
+    return {"tables": [row["table_name"] for row in rows], "database": {"label": label}}
+
+
+@app.delete("/api/account/database")
+async def clear_database_connection(request: Request):
+    require_local_mode()
+    require_self_service_databases()
+    user = auth_store.current_user(request)
+    auth_store.clear_database_url(user)
+    return {"success": True}
+
+
+@app.post("/api/database/tables")
+async def list_tables(request: Request, payload: DatabaseRequest):
+    require_local_mode()
+    conn = await connect_database(current_database_url(request, payload.database_id))
     try:
         rows = await conn.fetch(
             """
@@ -143,9 +242,9 @@ async def list_tables(payload: ConnectRequest):
 
 
 @app.post("/api/database/columns")
-async def list_columns(payload: TableRequest):
+async def list_columns(request: Request, payload: TableRequest):
     require_local_mode()
-    conn = await connect_database(payload.db_url)
+    conn = await connect_database(current_database_url(request, payload.database_id))
     try:
         columns = await table_schema(conn, payload.table_name)
         quoted_table = quote_identifier(payload.table_name)
@@ -188,9 +287,9 @@ async def list_columns(payload: TableRequest):
 
 
 @app.post("/api/database/search")
-async def search_entries(payload: SearchRequest):
+async def search_entries(request: Request, payload: SearchRequest):
     require_local_mode()
-    conn = await connect_database(payload.db_url)
+    conn = await connect_database(current_database_url(request, payload.database_id))
     try:
         columns = await table_schema(conn, payload.table_name)
         column_types = {column["column_name"]: column["data_type"] for column in columns}
@@ -326,9 +425,9 @@ async def portfolio_search(payload: PortfolioSearchRequest):
 
 
 @app.put("/api/database/record")
-async def update_entry(payload: UpdateEntryRequest):
+async def update_entry(request: Request, payload: UpdateEntryRequest):
     require_local_mode()
-    conn = await connect_database(payload.db_url)
+    conn = await connect_database(current_database_url(request, payload.database_id))
     try:
         columns = await table_schema(conn, payload.table_name)
         column_types = {column["column_name"]: column["data_type"] for column in columns}
@@ -364,9 +463,9 @@ async def update_entry(payload: UpdateEntryRequest):
 
 
 @app.delete("/api/database/record")
-async def delete_entry(payload: DeleteEntryRequest):
+async def delete_entry(request: Request, payload: DeleteEntryRequest):
     require_local_mode()
-    conn = await connect_database(payload.db_url)
+    conn = await connect_database(current_database_url(request, payload.database_id))
     try:
         columns = await table_schema(conn, payload.table_name)
         if "id" not in {column["column_name"] for column in columns}:

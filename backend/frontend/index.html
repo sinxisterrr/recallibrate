@@ -4,13 +4,13 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="color-scheme" content="dark light">
-    <title>recallibrate — local database workbench</title>
-    <meta name="description" content="A private, local-first workspace for searching and editing PostgreSQL data.">
+    <title>recallibrate — private database workbench</title>
+    <meta name="description" content="A private, Discord-authenticated workspace for searching and editing PostgreSQL data.">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600&family=IBM+Plex+Mono:ital,wght@0,400;0,500;1,500&display=swap" rel="stylesheet">
     <script src="lucide.min.js?v=20260715-3"></script>
-    <link rel="stylesheet" href="style.css?v=20260715-5">
+    <link rel="stylesheet" href="style.css?v=20260715-6">
 </head>
 <body>
     <div class="ambient-grid" aria-hidden="true"></div>
@@ -28,21 +28,35 @@
 
         <main class="connect-main">
             <div class="connect-copy">
-                <div class="eyebrow"><span></span> Local PostgreSQL manager</div>
+                <div class="eyebrow"><span></span> Private PostgreSQL manager</div>
                 <h1>Your database,<br><em>made readable.</em></h1>
-                <p>Connect, choose a table, then search and edit its records.</p>
+                <p>Sign in and Recallibrate will open the database assigned to you.</p>
 
-                <form id="connect-form" class="connection-card" novalidate>
-                    <label for="db-url">Database URL</label>
-                    <div class="url-field">
-                        <i data-lucide="database"></i>
-                        <input type="password" id="db-url" placeholder="postgresql://user:••••••@host/database" autocomplete="off" spellcheck="false" required>
-                        <button type="button" id="reveal-url" class="icon-btn" aria-label="Show database URL" aria-pressed="false"><i data-lucide="eye"></i></button>
+                <div id="signed-out-panel" class="auth-card">
+                    <div class="auth-mark"><i data-lucide="message-circle"></i></div>
+                    <div>
+                        <strong>Continue with Discord</strong>
+                        <p>Discord verifies your invited account. Recallibrate requests basic identity only.</p>
                     </div>
-                    <button type="submit" id="connect-btn" class="primary-btn"><span>Open database</span><i data-lucide="arrow-right"></i></button>
-                    <p class="privacy-note"><i data-lucide="shield-check"></i> Credentials stay in this local session.</p>
-                    <div id="connect-error" class="inline-error" role="alert" aria-live="polite"></div>
-                </form>
+                    <a href="/api/auth/discord/start" class="discord-btn"><span>Sign in with Discord</span><i data-lucide="arrow-up-right"></i></a>
+                </div>
+
+                <div id="signed-in-panel" hidden>
+                    <div class="account-strip">
+                        <div id="account-avatar" class="account-avatar"><i data-lucide="user"></i></div>
+                        <div><span>Signed in as</span><strong id="account-name">—</strong><small id="account-id">—</small></div>
+                        <button type="button" id="logout-btn" class="text-btn">Sign out</button>
+                    </div>
+                    <div id="assignment-panel" class="connection-card">
+                        <div class="auth-mark"><i data-lucide="database"></i></div>
+                        <div>
+                            <strong>Your private database</strong>
+                            <p id="assignment-status">Checking your assigned database…</p>
+                        </div>
+                        <p class="privacy-note"><i data-lucide="shield-check"></i> Database credentials remain on the server and are never sent to your browser.</p>
+                        <div id="connect-error" class="inline-error" role="alert" aria-live="polite"></div>
+                    </div>
+                </div>
             </div>
         </main>
     </section>
@@ -50,7 +64,7 @@
     <section id="workspace-view" class="workspace-view" hidden>
         <aside class="sidebar">
             <div class="sidebar-head">
-                <button type="button" class="wordmark wordmark-button" id="home-btn" aria-label="Disconnect and return home"><em>recall</em><span>ibrate</span><b>·</b></button>
+                <button type="button" class="wordmark wordmark-button" id="home-btn" aria-label="Refresh Recallibrate"><em>recall</em><span>ibrate</span><b>·</b></button>
                 <div class="connection-state"><span></span> connected</div>
             </div>
 
@@ -58,6 +72,10 @@
                 <span>Database tables</span>
                 <strong id="table-count">0</strong>
             </div>
+            <label class="sidebar-search" for="database-select">
+                <i data-lucide="database"></i>
+                <select id="database-select" aria-label="Choose an assigned database"></select>
+            </label>
             <label class="sidebar-search" for="table-filter">
                 <i data-lucide="search"></i>
                 <input type="search" id="table-filter" placeholder="Find a table" autocomplete="off">
@@ -66,8 +84,8 @@
             <nav id="tables" class="table-list" aria-label="Database tables"></nav>
 
             <div class="sidebar-foot">
-                <div class="session-note"><i data-lucide="shield"></i><span>Local session<br><small>Credentials never saved</small></span></div>
-                <button type="button" id="disconnect-btn" class="icon-btn" aria-label="Disconnect"><i data-lucide="log-out"></i></button>
+                <div class="session-note"><i data-lucide="shield"></i><span id="session-user">Discord session<br><small id="session-database">Encrypted connection</small></span></div>
+                <button type="button" id="disconnect-btn" class="icon-btn" aria-label="Sign out"><i data-lucide="log-out"></i></button>
             </div>
         </aside>
 
@@ -165,6 +183,6 @@
         </form>
     </dialog>
 
-    <script src="app.js?v=20260715-5"></script>
+    <script src="app.js?v=20260715-6"></script>
 </body>
 </html>

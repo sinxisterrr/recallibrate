@@ -9,6 +9,8 @@ COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
 COPY main.py .
+COPY auth.py .
+COPY assignments.py .
 COPY frontend ./frontend
 
 EXPOSE 8000

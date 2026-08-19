@@ -1,5 +1,8 @@
 const state = {
-    dbUrl: '',
+    user: null,
+    databaseLabel: null,
+    databases: [],
+    activeDatabaseId: null,
     tables: [],
     activeTable: null,
     columns: [],
@@ -16,11 +19,15 @@ const $$ = (selector) => [...document.querySelectorAll(selector)];
 const elements = {
     connectView: $('#connect-view'),
     workspaceView: $('#workspace-view'),
-    connectForm: $('#connect-form'),
-    connectBtn: $('#connect-btn'),
+    signedOutPanel: $('#signed-out-panel'),
+    signedInPanel: $('#signed-in-panel'),
+    accountAvatar: $('#account-avatar'),
+    accountName: $('#account-name'),
+    accountId: $('#account-id'),
+    logoutBtn: $('#logout-btn'),
     connectError: $('#connect-error'),
-    dbUrl: $('#db-url'),
-    revealUrl: $('#reveal-url'),
+    assignmentStatus: $('#assignment-status'),
+    databaseSelect: $('#database-select'),
     tableFilter: $('#table-filter'),
     tables: $('#tables'),
     tableCount: $('#table-count'),
@@ -46,6 +53,9 @@ const elements = {
     toastRegion: $('#toast-region'),
     deleteDialog: $('#delete-dialog'),
     deleteTableName: $('#delete-table-name'),
+    sessionUser: $('#session-user'),
+    sessionDatabase: $('#session-database'),
+    connectionLabel: $('#connection-label'),
 };
 
 const textTypes = new Set(['text', 'character varying', 'varchar', 'character', 'char']);
@@ -88,7 +98,11 @@ async function api(path, options = {}) {
     });
     let data = {};
     try { data = await response.json(); } catch (_) { /* handled below */ }
-    if (!response.ok || data.error) throw new Error(data.detail || data.error || `Request failed (${response.status})`);
+    if (!response.ok || data.error) {
+        const error = new Error(data.detail || data.error || `Request failed (${response.status})`);
+        error.status = response.status;
+        throw error;
+    }
     return data;
 }
 
@@ -114,25 +128,67 @@ function showToast(message, type = 'success') {
     setTimeout(() => toast.remove(), 3600);
 }
 
-function setConnectLoading(loading) {
-    elements.connectBtn.disabled = loading;
-    elements.connectBtn.querySelector('span').textContent = loading ? 'Opening…' : 'Open database';
-}
-
 function showWorkspace() {
     elements.connectView.hidden = true;
     elements.workspaceView.hidden = false;
 }
 
-function disconnect() {
-    Object.assign(state, { dbUrl: '', tables: [], activeTable: null, columns: [], results: [], query: '', fuzzy: false, filters: {} });
-    elements.dbUrl.value = '';
+function showAssignmentView() {
+    Object.assign(state, { tables: [], activeTable: null, columns: [], results: [], query: '', fuzzy: false, filters: {} });
     elements.tableFilter.value = '';
     elements.searchInput.value = '';
     elements.connectError.textContent = '';
     elements.workspaceView.hidden = true;
     elements.connectView.hidden = false;
-    elements.dbUrl.focus();
+}
+
+function renderAccount(user, database = {}) {
+    state.user = user;
+    state.databaseLabel = database.label || null;
+    elements.signedOutPanel.hidden = true;
+    elements.signedInPanel.hidden = false;
+    elements.accountName.textContent = user.display_name || user.username;
+    elements.accountId.textContent = `Discord ${user.discord_id}`;
+    elements.accountAvatar.innerHTML = user.avatar_url
+        ? `<img src="${escapeHtml(user.avatar_url)}" alt="">`
+        : icon('user');
+    elements.sessionUser.firstChild.textContent = `${user.display_name || user.username}\n`;
+    elements.sessionDatabase.textContent = database.label || 'Awaiting assignment';
+    elements.connectionLabel.textContent = database.label || 'PostgreSQL';
+    elements.assignmentStatus.textContent = database.connected
+        ? `${database.label || 'Your database'} is assigned and ready.`
+        : 'No database is assigned to this Discord account yet. Ask Dystopian staff for access.';
+    refreshIcons();
+}
+
+function renderDatabaseChoices() {
+    elements.databaseSelect.innerHTML = state.databases.map((database) =>
+        `<option value="${escapeHtml(database.id)}" ${database.id === state.activeDatabaseId ? 'selected' : ''}>${escapeHtml(database.label)}</option>`
+    ).join('');
+    elements.databaseSelect.closest('label').hidden = state.databases.length < 2;
+}
+
+async function logout() {
+    await fetch('/api/auth/logout', { method: 'POST' });
+    window.location.assign('/');
+}
+
+async function openSavedDatabase(databaseId = state.activeDatabaseId) {
+    const selected = state.databases.find((database) => database.id === databaseId) || state.databases[0];
+    if (!selected) return showAssignmentView();
+    state.activeDatabaseId = selected.id;
+    state.databaseLabel = selected.label;
+    elements.sessionDatabase.textContent = selected.label;
+    elements.connectionLabel.textContent = selected.label;
+    renderDatabaseChoices();
+    const data = await api('/api/database/tables', {
+        method: 'POST',
+        body: JSON.stringify({ database_id: selected.id }),
+    });
+    state.tables = (data.tables || []).sort((a, b) => a.localeCompare(b));
+    showWorkspace();
+    renderTables();
+    if (state.tables.length) await selectTable(state.tables[0]);
 }
 
 function renderTables() {
@@ -231,8 +287,8 @@ async function searchTable() {
         const data = await api('/api/database/search', {
             method: 'POST',
             body: JSON.stringify({
-                db_url: state.dbUrl,
                 table_name: state.activeTable,
+                database_id: state.activeDatabaseId,
                 query: state.query,
                 filters: state.filters,
                 fuzzy: state.fuzzy,
@@ -266,7 +322,7 @@ async function selectTable(table) {
     try {
         const data = await api('/api/database/columns', {
             method: 'POST',
-            body: JSON.stringify({ db_url: state.dbUrl, table_name: table }),
+            body: JSON.stringify({ table_name: table, database_id: state.activeDatabaseId }),
         });
         state.columns = data.columns || [];
         renderFilters();
@@ -303,7 +359,7 @@ async function saveEdit(rowIndex, column, newText) {
     try {
         await api('/api/database/record', {
             method: 'PUT',
-            body: JSON.stringify({ db_url: state.dbUrl, table_name: state.activeTable, record_id: String(row.id), column_name: column, new_text: newText }),
+            body: JSON.stringify({ database_id: state.activeDatabaseId, table_name: state.activeTable, record_id: String(row.id), column_name: column, new_text: newText }),
         });
         row[column] = newText;
         renderResults();
@@ -328,7 +384,7 @@ async function confirmDelete() {
     try {
         await api('/api/database/record', {
             method: 'DELETE',
-            body: JSON.stringify({ db_url: state.dbUrl, table_name: state.activeTable, record_id: String(row.id) }),
+            body: JSON.stringify({ database_id: state.activeDatabaseId, table_name: state.activeTable, record_id: String(row.id) }),
         });
         state.results.splice(rowIndex, 1);
         renderResults();
@@ -338,44 +394,14 @@ async function confirmDelete() {
     }
 }
 
-elements.connectForm.addEventListener('submit', async (event) => {
-    event.preventDefault();
-    const dbUrl = elements.dbUrl.value.trim();
-    elements.connectError.textContent = '';
-    if (!dbUrl) {
-        elements.connectError.textContent = 'Enter a PostgreSQL connection URL to continue.';
-        elements.dbUrl.focus();
-        return;
-    }
-    setConnectLoading(true);
-    try {
-        const data = await api('/api/database/tables', {
-            method: 'POST',
-            body: JSON.stringify({ db_url: dbUrl }),
-        });
-        state.dbUrl = dbUrl;
-        state.tables = (data.tables || []).sort((a, b) => a.localeCompare(b));
-        showWorkspace();
-        renderTables();
-        if (state.tables.length) await selectTable(state.tables[0]);
-    } catch (error) {
-        elements.connectError.textContent = friendlyError(error);
-    } finally {
-        setConnectLoading(false);
-    }
-});
-
-elements.revealUrl.addEventListener('click', () => {
-    const reveal = elements.dbUrl.type === 'password';
-    elements.dbUrl.type = reveal ? 'text' : 'password';
-    elements.revealUrl.setAttribute('aria-pressed', String(reveal));
-    elements.revealUrl.innerHTML = icon(reveal ? 'eye-off' : 'eye');
-    refreshIcons();
-});
-
 $$('[data-theme-btn]').forEach((button) => button.addEventListener('click', () => setTheme(button.dataset.themeBtn)));
 elements.tables.addEventListener('click', (event) => selectTable(event.target.closest('[data-table]')?.dataset.table));
 elements.tableFilter.addEventListener('input', renderTables);
+elements.databaseSelect.addEventListener('change', async () => {
+    Object.assign(state, { tables: [], activeTable: null, columns: [], results: [], query: '', fuzzy: false, filters: {} });
+    elements.searchInput.value = '';
+    await openSavedDatabase(elements.databaseSelect.value);
+});
 elements.searchForm.addEventListener('submit', (event) => { event.preventDefault(); searchTable(); });
 elements.fuzzyToggle.addEventListener('change', searchTable);
 elements.refreshBtn.addEventListener('click', searchTable);
@@ -402,8 +428,9 @@ elements.deleteDialog.addEventListener('close', () => {
     if (elements.deleteDialog.returnValue === 'confirm') confirmDelete();
     else state.pendingDeleteIndex = null;
 });
-$('#disconnect-btn').addEventListener('click', disconnect);
-$('#home-btn').addEventListener('click', disconnect);
+elements.logoutBtn.addEventListener('click', logout);
+$('#disconnect-btn').addEventListener('click', logout);
+$('#home-btn').addEventListener('click', () => window.location.assign('/'));
 
 document.addEventListener('keydown', (event) => {
     if (event.key === '/' && !elements.workspaceView.hidden && !/input|textarea|select/i.test(document.activeElement.tagName)) {
@@ -414,3 +441,25 @@ document.addEventListener('keydown', (event) => {
 
 setTheme(localStorage.getItem('recallibrate-theme') || 'system');
 refreshIcons();
+
+async function bootstrap() {
+    try {
+        const data = await api('/api/auth/me');
+        state.databases = data.databases || [];
+        state.activeDatabaseId = state.databases[0]?.id || null;
+        renderAccount(data.user, data.database);
+        if (data.database?.connected) await openSavedDatabase();
+        else showAssignmentView();
+    } catch (error) {
+        if (error.status === 401) {
+            elements.signedOutPanel.hidden = false;
+            elements.signedInPanel.hidden = true;
+            return;
+        }
+        elements.signedOutPanel.hidden = true;
+        elements.signedInPanel.hidden = false;
+        elements.connectError.textContent = friendlyError(error);
+    }
+}
+
+bootstrap();

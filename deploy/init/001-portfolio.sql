@@ -54,7 +54,7 @@ INSERT INTO sam_lore (category, fact, context, energy) VALUES
     ('writing', 'I have started writing 4 books, and finished none.', 'The ideas are not the problem.', 'honest');
 
 INSERT INTO projects (project, description, status, stack, favorite_detail) VALUES
-    ('Autonomous AI architecture', 'A 90,000-line AI architecture with autonomous systems and 74 tools around memory curation and utilities such as Notion, Spotify, and reading.', 'built', 'Python · AI systems · APIs · memory architecture', 'Ninety thousand lines. Seventy-four tools.'),
+    ('Autonomous AI architecture', 'A 90,000-line AI architecture with autonomous systems and 74 tools around memory curation and utilities such as Notion, Spotify, and reading.', 'built', 'TypeScript · AI systems · APIs · memory architecture', 'Ninety thousand lines. Seventy-four tools.'),
     ('Markdown editor', 'A markdown editor and live-viewing application.', 'built', 'JavaScript · Markdown', 'Write on one side; watch it become real on the other.'),
     ('Recallibrate', 'This! A database manager that can search, filter, and edit live PostgreSQL tables.', 'you are in it', 'PostgreSQL · FastAPI · JavaScript · CSS', 'The portfolio is querying itself.'),
     ('Sticky notes', 'A sticky note app for my PC and phone that will lay on top of other windows like sticky notes frankly should, thank you very much.', 'in progress', 'Desktop · mobile · sync', 'Sticky notes should actually stick.');
