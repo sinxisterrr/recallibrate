@@ -73,9 +73,7 @@ button, input, select, textarea { font: inherit; }
 .connection-divider { display: flex; align-items: center; gap: 10px; width: 100%; color: var(--faint); font-size: 10px; letter-spacing: .07em; text-transform: uppercase; }
 .connection-divider::before, .connection-divider::after { content: ""; flex: 1; height: 1px; background: var(--line); }
 .connection-divider[hidden] { display: none; }
-.guest-database-card { grid-template-columns: auto 1fr; }
-.guest-database-controls { grid-column: 1 / -1; display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 10px; width: 100%; }
-.guest-database-card .inline-error { grid-column: 1 / -1; }
+.guest-database-controls { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 10px; width: 100%; }
 @media (max-width: 680px) { .guest-database-controls { grid-template-columns: 1fr; } }
 button { color: inherit; }
 [hidden] { display: none !important; }
@@ -112,6 +110,19 @@ button { color: inherit; }
 .discord-btn { grid-column: 1 / -1; min-height: 48px; display: flex; align-items: center; justify-content: center; gap: 9px; border-radius: 8px; color: #fff; background: #5865f2; text-decoration: none; font-weight: 600; transition: transform .15s, background .15s; }
 .discord-btn:hover { transform: translateY(-1px); background: #4752c4; }
 .discord-btn svg { width: 16px; }
+
+.connection-gateway { overflow: hidden; border: 1px solid var(--line-strong); border-radius: var(--radius); background: var(--surface-raised); box-shadow: 5px 5px 0 var(--paper-deep); }
+.connection-tabs { display: grid; grid-template-columns: 1fr 1fr; gap: 4px; margin: 6px; padding: 4px; border-radius: 9px; background: var(--paper-deep); }
+.connection-tab { min-height: 40px; padding: 0 14px; display: inline-flex; align-items: center; justify-content: center; gap: 8px; border: 0; border-radius: 7px; background: transparent; color: var(--muted); font: 600 12px var(--sans); cursor: pointer; transition: color .15s, background .15s, box-shadow .15s; }
+.connection-tab:hover { color: var(--ink); }
+.connection-tab.active { color: var(--ink); background: var(--surface-raised); box-shadow: 0 1px 4px rgba(0,0,0,.12); }
+.connection-tab svg { width: 16px; height: 16px; color: var(--signal); }
+.connection-tab:first-child svg { color: #5865f2; }
+.connection-panel { display: grid; gap: 16px; padding: 20px; border-top: 1px solid var(--line); }
+.connection-copy-small strong { display: block; font-size: 14px; }
+.connection-copy-small p { margin: 5px 0 0; color: var(--muted); font-size: 12px; line-height: 1.45; }
+.connection-panel .discord-btn { min-height: 46px; }
+.connection-panel .inline-error { grid-column: 1 / -1; }
 .account-strip { min-height: 62px; margin-bottom: 12px; padding: 9px 12px; display: flex; align-items: center; gap: 11px; border: 1px solid var(--line); border-radius: 10px; background: var(--surface); }
 .account-avatar { width: 40px; height: 40px; flex: 0 0 auto; display: grid; place-items: center; border-radius: 50%; overflow: hidden; background: var(--signal-soft); color: var(--signal); }
 .account-avatar img { width: 100%; height: 100%; object-fit: cover; }

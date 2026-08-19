@@ -21,7 +21,8 @@ const elements = {
     workspaceView: $('#workspace-view'),
     signedOutPanel: $('#signed-out-panel'),
     signedInPanel: $('#signed-in-panel'),
-    guestDivider: $('#guest-divider'),
+    connectionTabs: $$('[data-connection-tab]'),
+    discordConnectionPanel: $('#discord-connection-panel'),
     guestDatabaseForm: $('#guest-database-form'),
     guestDatabaseUrl: $('#guest-database-url'),
     guestConnectError: $('#guest-connect-error'),
@@ -159,8 +160,6 @@ function renderAccount(user, database = {}) {
     state.databaseLabel = database.label || null;
     elements.signedOutPanel.hidden = true;
     elements.signedInPanel.hidden = false;
-    elements.guestDivider.hidden = true;
-    elements.guestDatabaseForm.hidden = true;
     elements.accountName.textContent = user.display_name || user.username;
     elements.accountId.textContent = user.is_guest ? 'Standalone encrypted session' : `Discord ${user.discord_id}`;
     elements.accountAvatar.innerHTML = user.avatar_url
@@ -175,6 +174,20 @@ function renderAccount(user, database = {}) {
     elements.databaseConnectForm.hidden = database.connected;
     elements.runtimeConnectForm.hidden = database.connected;
     elements.connectionDivider.hidden = database.connected;
+    refreshIcons();
+}
+
+function setConnectionMethod(method) {
+    const showDatabase = method === 'database';
+    elements.discordConnectionPanel.hidden = showDatabase;
+    elements.guestDatabaseForm.hidden = !showDatabase;
+    elements.connectionTabs.forEach((tab) => {
+        const selected = tab.dataset.connectionTab === method;
+        tab.classList.toggle('active', selected);
+        tab.setAttribute('aria-selected', String(selected));
+        tab.tabIndex = selected ? 0 : -1;
+    });
+    if (showDatabase) requestAnimationFrame(() => elements.guestDatabaseUrl.focus());
     refreshIcons();
 }
 
@@ -490,6 +503,7 @@ async function confirmDelete() {
 }
 
 $$('[data-theme-btn]').forEach((button) => button.addEventListener('click', () => setTheme(button.dataset.themeBtn)));
+elements.connectionTabs.forEach((tab) => tab.addEventListener('click', () => setConnectionMethod(tab.dataset.connectionTab)));
 elements.tables.addEventListener('click', (event) => selectTable(event.target.closest('[data-table]')?.dataset.table));
 elements.tableFilter.addEventListener('input', renderTables);
 elements.databaseSelect.addEventListener('change', async () => {
@@ -538,6 +552,7 @@ document.addEventListener('keydown', (event) => {
 });
 
 setTheme(localStorage.getItem('recallibrate-theme') || 'system');
+setConnectionMethod('discord');
 refreshIcons();
 
 async function bootstrap() {
@@ -552,8 +567,6 @@ async function bootstrap() {
         if (error.status === 401) {
             elements.signedOutPanel.hidden = false;
             elements.signedInPanel.hidden = true;
-            elements.guestDivider.hidden = false;
-            elements.guestDatabaseForm.hidden = false;
             return;
         }
         elements.signedOutPanel.hidden = true;
