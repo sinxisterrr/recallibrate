@@ -61,6 +61,11 @@
 html { min-width: 320px; background: var(--paper); }
 body { margin: 0; min-height: 100vh; color: var(--ink); background: var(--paper); font-family: var(--sans); transition: background .2s ease, color .2s ease; }
 button, input, select, textarea { font: inherit; }
+.discord-mark svg { width: 31px; height: 24px; }
+.discord-btn svg { width: 22px; height: 17px; flex: 0 0 auto; }
+.database-connect-form { display: grid; gap: 10px; margin-top: 18px; width: 100%; }
+.database-connect-form[hidden] { display: none; }
+.database-connect-form > label { color: var(--muted); font-size: 11px; font-weight: 600; letter-spacing: .08em; text-transform: uppercase; }
 button { color: inherit; }
 [hidden] { display: none !important; }
 

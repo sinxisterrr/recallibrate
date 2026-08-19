@@ -70,6 +70,7 @@ class AuthStore:
         self.path = Path(os.getenv("RECALLIBRATE_STATE_PATH", str(default_path)))
         self.path.parent.mkdir(parents=True, exist_ok=True)
         self.allowed_discord_ids = _csv_set("RECALLIBRATE_ALLOWED_DISCORD_IDS")
+        self.allow_any_discord_user = _truthy("RECALLIBRATE_ALLOW_ANY_DISCORD_USER")
         self.allowed_database_hosts = {host.lower() for host in _csv_set("RECALLIBRATE_ALLOWED_DB_HOSTS")}
         self.database_assignments = database_assignments()
         self.allow_self_service_databases = _truthy("RECALLIBRATE_ALLOW_SELF_SERVICE_DATABASES")
@@ -125,7 +126,7 @@ class AuthStore:
             )
             if not value
         ]
-        if not self.allowed_discord_ids:
+        if not self.allow_any_discord_user and not self.allowed_discord_ids:
             missing.append("RECALLIBRATE_ALLOWED_DISCORD_IDS")
         if missing:
             raise HTTPException(status_code=503, detail=f"Authentication is not configured: {', '.join(missing)}.")
@@ -167,7 +168,7 @@ class AuthStore:
         profile = await asyncio.to_thread(self._discord_profile, code)
 
         discord_id = str(profile["id"])
-        if discord_id not in self.allowed_discord_ids:
+        if not self.discord_user_allowed(discord_id):
             raise HTTPException(status_code=403, detail="This Discord account is not invited to Recallibrate.")
 
         now = _utcnow().isoformat()
@@ -260,7 +261,7 @@ class AuthStore:
             ).fetchone()
         if not row:
             raise HTTPException(status_code=401, detail="Your Recallibrate session has expired.")
-        if row["discord_id"] not in self.allowed_discord_ids:
+        if not self.discord_user_allowed(row["discord_id"]):
             raise HTTPException(status_code=403, detail="This Discord account is no longer invited to Recallibrate.")
         avatar_url = None
         if row["avatar_hash"]:
@@ -274,6 +275,9 @@ class AuthStore:
             has_database=bool(assignments or row["has_database"]),
             database_label=(assignments[0].label if len(assignments) == 1 else f"{len(assignments)} assigned databases") if assignments else row["database_label"],
         )
+
+    def discord_user_allowed(self, discord_id: str) -> bool:
+        return self.allow_any_discord_user or discord_id in self.allowed_discord_ids
 
     def database_choices_for(self, user: DiscordUser) -> list[dict[str, str]]:
         assignments = self.database_assignments.get(user.discord_id, ())

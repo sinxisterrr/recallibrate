@@ -27,6 +27,8 @@ const elements = {
     logoutBtn: $('#logout-btn'),
     connectError: $('#connect-error'),
     assignmentStatus: $('#assignment-status'),
+    databaseConnectForm: $('#database-connect-form'),
+    databaseUrl: $('#database-url'),
     databaseSelect: $('#database-select'),
     tableFilter: $('#table-filter'),
     tables: $('#tables'),
@@ -156,8 +158,9 @@ function renderAccount(user, database = {}) {
     elements.sessionDatabase.textContent = database.label || 'Awaiting assignment';
     elements.connectionLabel.textContent = database.label || 'PostgreSQL';
     elements.assignmentStatus.textContent = database.connected
-        ? `${database.label || 'Your database'} is assigned and ready.`
-        : 'No database is assigned to this Discord account yet. Ask Dystopian staff for access.';
+        ? `${database.label || 'Your database'} is ready.`
+        : 'No database is connected yet. Paste its PostgreSQL URL below.';
+    elements.databaseConnectForm.hidden = database.connected;
     refreshIcons();
 }
 
@@ -171,6 +174,25 @@ function renderDatabaseChoices() {
 async function logout() {
     await fetch('/api/auth/logout', { method: 'POST' });
     window.location.assign('/');
+}
+
+async function connectDatabase(event) {
+    event.preventDefault();
+    const button = elements.databaseConnectForm.querySelector('button[type="submit"]');
+    button.disabled = true;
+    elements.connectError.textContent = '';
+    try {
+        await api('/api/account/database', {
+            method: 'PUT',
+            body: JSON.stringify({ db_url: elements.databaseUrl.value.trim() }),
+        });
+        elements.databaseUrl.value = '';
+        await bootstrap();
+    } catch (error) {
+        elements.connectError.textContent = friendlyError(error);
+    } finally {
+        button.disabled = false;
+    }
 }
 
 async function openSavedDatabase(databaseId = state.activeDatabaseId) {
@@ -429,6 +451,7 @@ elements.deleteDialog.addEventListener('close', () => {
     else state.pendingDeleteIndex = null;
 });
 elements.logoutBtn.addEventListener('click', logout);
+elements.databaseConnectForm.addEventListener('submit', connectDatabase);
 $('#disconnect-btn').addEventListener('click', logout);
 $('#home-btn').addEventListener('click', () => window.location.assign('/'));
 

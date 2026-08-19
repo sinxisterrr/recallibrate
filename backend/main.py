@@ -1,8 +1,11 @@
 """Recallibrate's local PostgreSQL API and static frontend."""
 
+import asyncio
 from datetime import date
+import ipaddress
 import os
 from pathlib import Path
+import socket
 from typing import Optional
 from urllib.parse import urlparse
 
@@ -141,14 +144,24 @@ def current_database_url(request: Request, database_id: Optional[str] = None) ->
     return auth_store.database_url_for(user, database_id)
 
 
-def database_label(db_url: str) -> str:
+async def database_label(db_url: str) -> str:
     parsed = urlparse(db_url)
     if parsed.scheme not in {"postgres", "postgresql"} or not parsed.hostname:
         raise HTTPException(status_code=400, detail="Enter a valid PostgreSQL connection URL.")
-    if not auth_store.allowed_database_hosts:
-        raise HTTPException(status_code=503, detail="RECALLIBRATE_ALLOWED_DB_HOSTS is not configured.")
-    if parsed.hostname.lower() not in auth_store.allowed_database_hosts:
-        raise HTTPException(status_code=403, detail="That database host is not approved for Recallibrate.")
+    hostname = parsed.hostname.lower()
+    if hostname not in auth_store.allowed_database_hosts:
+        try:
+            addresses = await asyncio.to_thread(
+                socket.getaddrinfo, hostname, parsed.port or 5432, type=socket.SOCK_STREAM
+            )
+        except socket.gaierror as error:
+            raise HTTPException(status_code=400, detail="That database host could not be found.") from error
+        resolved = {item[4][0] for item in addresses}
+        if not resolved or any(not ipaddress.ip_address(address).is_global for address in resolved):
+            raise HTTPException(
+                status_code=403,
+                detail="Private database hosts must be approved by Dystopian staff.",
+            )
     database_name = parsed.path.lstrip("/") or "postgres"
     try:
         port = f":{parsed.port}" if parsed.port else ""
@@ -197,7 +210,7 @@ async def save_database_connection(request: Request, payload: ConnectRequest):
     require_self_service_databases()
     user = auth_store.current_user(request)
     db_url = payload.db_url.strip()
-    label = database_label(db_url)
+    label = await database_label(db_url)
     conn = await connect_database(db_url)
     try:
         rows = await conn.fetch(

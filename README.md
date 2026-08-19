@@ -18,11 +18,11 @@ The name is deliberate: **recall** + calibrate.
 6. Set `RECALLIBRATE_ALLOWED_DB_HOSTS` to the exact private database hostnames Recallibrate may contact. Connections are refused when this allowlist is empty.
 7. Persist `RECALLIBRATE_STATE_PATH` with a private container volume. This SQLite control store contains user records and session hashes.
 
-Recallibrate requests only Discord's `identify` scope. `RECALLIBRATE_ALLOWED_DISCORD_IDS` is mandatory and defaults to denying every account. Sessions last 14 days and can be revoked by signing out.
+Recallibrate requests only Discord's `identify` scope. By default, `RECALLIBRATE_ALLOWED_DISCORD_IDS` limits access to named accounts. Set `RECALLIBRATE_ALLOW_ANY_DISCORD_USER=true` to admit any successfully authenticated Discord account. Sessions last 14 days and can be revoked by signing out.
 
 For local HTTP development, use `RECALLIBRATE_SECURE_COOKIES=false`. Keep it `true` behind production HTTPS.
 
-The generic database API is authenticated and never accepts a database URL on table, search, edit, or delete requests. By default, the connection-management endpoints are disabled: a signed-in user's Discord ID selects a server-owned connection automatically. Legacy self-service URLs can be re-enabled explicitly with `RECALLIBRATE_ALLOW_SELF_SERVICE_DATABASES=true`.
+The generic database API is authenticated and never accepts a database URL on table, search, edit, or delete requests. With `RECALLIBRATE_ALLOW_SELF_SERVICE_DATABASES=true`, users without an assigned database can save an encrypted PostgreSQL URL through the connection screen. Assigned databases remain server-owned. Unapproved private or local network hosts are blocked; trusted private hosts must be listed in `RECALLIBRATE_ALLOWED_DB_HOSTS`.
 
 Example assignment:
 

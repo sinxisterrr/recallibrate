@@ -28,6 +28,17 @@ class AssignedDatabaseAccessTests(unittest.TestCase):
             )
         }
 
+    def test_allow_any_discord_user_bypasses_invite_list(self):
+        self.store.allow_any_discord_user = True
+        self.store.allowed_discord_ids = set()
+        self.assertTrue(self.store.discord_user_allowed("999"))
+
+    def test_invite_list_still_works_when_public_login_is_disabled(self):
+        self.store.allow_any_discord_user = False
+        self.store.allowed_discord_ids = {"222"}
+        self.assertTrue(self.store.discord_user_allowed("222"))
+        self.assertFalse(self.store.discord_user_allowed("999"))
+
     def test_owner_sees_only_assigned_database_metadata(self):
         self.assertEqual(
             self.store.database_choices_for(user("222")),
