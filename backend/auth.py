@@ -28,6 +28,7 @@ from assignments import database_assignments
 
 DISCORD_API = "https://discord.com/api/v10"
 DISCORD_AUTHORIZE = "https://discord.com/oauth2/authorize"
+DISCORD_USER_AGENT = "DiscordBot (https://recallibrate.app, 1.0)"
 SESSION_COOKIE = "recallibrate_session"
 OAUTH_STATE_COOKIE = "recallibrate_oauth_state"
 SESSION_DAYS = 14
@@ -238,9 +239,14 @@ class AuthStore:
         token_request = UrlRequest(
             f"{DISCORD_API}/oauth2/token",
             data=token_body,
-            headers={"Content-Type": "application/x-www-form-urlencoded"},
+            headers={
+                "Accept": "application/json",
+                "Content-Type": "application/x-www-form-urlencoded",
+                "User-Agent": DISCORD_USER_AGENT,
+            },
             method="POST",
         )
+        request_stage = "token"
         try:
             with urlopen(token_request, timeout=15) as response:
                 access_token = json.load(response).get("access_token")
@@ -248,8 +254,13 @@ class AuthStore:
                 raise HTTPException(status_code=400, detail="Discord could not complete that login.")
             user_request = UrlRequest(
                 f"{DISCORD_API}/users/@me",
-                headers={"Authorization": f"Bearer {access_token}"},
+                headers={
+                    "Accept": "application/json",
+                    "Authorization": f"Bearer {access_token}",
+                    "User-Agent": DISCORD_USER_AGENT,
+                },
             )
+            request_stage = "profile"
             with urlopen(user_request, timeout=15) as response:
                 return json.load(response)
         except HTTPError as error:
@@ -262,12 +273,19 @@ class AuthStore:
             except (ValueError, UnicodeDecodeError):
                 pass
             logger.warning(
-                "Discord OAuth request failed (status=%s, error=%s, description=%s)",
+                "Discord OAuth request failed (stage=%s, status=%s, error=%s, description=%s)",
+                request_stage,
                 error.code,
                 discord_error,
                 discord_description,
             )
-            raise HTTPException(status_code=400, detail="Discord could not complete that login.") from error
+            if error.code == 403 and discord_error == "unknown_error":
+                raise HTTPException(status_code=502, detail="discord_request_blocked") from error
+            if discord_error == "invalid_client":
+                raise HTTPException(status_code=503, detail="discord_invalid_client") from error
+            if discord_error == "invalid_grant":
+                raise HTTPException(status_code=400, detail="discord_invalid_grant") from error
+            raise HTTPException(status_code=400, detail="discord_login_failed") from error
         except URLError as error:
             raise HTTPException(status_code=502, detail="Discord could not be reached. Please try again.") from error
 

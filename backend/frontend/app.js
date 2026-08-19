@@ -196,7 +196,11 @@ function showCallbackError() {
     const url = new URL(window.location.href);
     const errorCode = url.searchParams.get('auth_error');
     const messages = {
-        discord_login: "Discord rejected the login exchange. Check Recallibrate's Discord client secret.",
+        discord_login: "Discord couldn't finish that login. Please try again.",
+        discord_login_failed: "Discord rejected the login exchange. Please try again.",
+        discord_invalid_client: "Discord rejected Recallibrate's application credentials. Check the OAuth2 client secret.",
+        discord_invalid_grant: 'That Discord authorization expired or was already used. Please start again.',
+        discord_request_blocked: 'Discord blocked the server request before processing the login. Please try again after this deployment refreshes.',
         discord_not_invited: 'This Discord account is not currently allowed to use Recallibrate.',
         discord_unavailable: 'Discord could not be reached. Please try again in a moment.',
         discord_not_configured: 'Discord login is not completely configured on this deployment.',

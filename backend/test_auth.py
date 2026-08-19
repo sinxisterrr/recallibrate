@@ -1,5 +1,7 @@
 import os
 from http.cookies import SimpleCookie
+import io
+import json
 import sqlite3
 import tempfile
 import unittest
@@ -106,6 +108,32 @@ class GuestDatabaseSessionTests(unittest.TestCase):
                 self.assertEqual(remaining, 0)
             finally:
                 conn.close()
+        finally:
+            os.unlink(handle.name)
+
+
+class DiscordOAuthRequestTests(unittest.TestCase):
+    def test_discord_requests_identify_recallibrate(self):
+        handle = tempfile.NamedTemporaryFile(delete=False)
+        handle.close()
+        try:
+            with patch.dict(os.environ, {
+                "RECALLIBRATE_STATE_PATH": handle.name,
+                "RECALLIBRATE_PORTFOLIO_ONLY": "false",
+                "DISCORD_CLIENT_ID": "client-id",
+                "DISCORD_CLIENT_SECRET": "client-secret",
+                "DISCORD_REDIRECT_URI": "https://recallibrate.app/api/auth/discord/callback",
+            }, clear=False):
+                store = AuthStore()
+            token_response = io.BytesIO(json.dumps({"access_token": "access-token"}).encode())
+            profile_response = io.BytesIO(json.dumps({"id": "123", "username": "sin"}).encode())
+            with patch("auth.urlopen", side_effect=[token_response, profile_response]) as mocked_urlopen:
+                profile = store._discord_profile("authorization-code")
+            self.assertEqual(profile["id"], "123")
+            for call in mocked_urlopen.call_args_list:
+                headers = dict(call.args[0].header_items())
+                self.assertEqual(headers["User-agent"], "DiscordBot (https://recallibrate.app, 1.0)")
+                self.assertEqual(headers["Accept"], "application/json")
         finally:
             os.unlink(handle.name)
 

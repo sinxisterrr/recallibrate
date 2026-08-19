@@ -217,7 +217,13 @@ async def discord_callback(
     try:
         return await auth_store.oauth_callback(request, code, state)
     except HTTPException as exc:
-        error_code = {
+        known_details = {
+            "discord_request_blocked",
+            "discord_invalid_client",
+            "discord_invalid_grant",
+            "discord_login_failed",
+        }
+        error_code = exc.detail if exc.detail in known_details else {
             403: "discord_not_invited",
             502: "discord_unavailable",
             503: "discord_not_configured",
